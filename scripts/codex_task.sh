@@ -9,7 +9,7 @@ log=".codex/last.log"
 msg=".codex/last_message.txt"
 : > "$log"
 
-opts=(-c 'sandbox_mode="workspace-write"' -c 'approval_policy="never"' -o "$msg")
+opts=(-c 'sandbox_mode="workspace-write"' -c 'approval_policy="never"' -c 'sandbox_workspace_write.network_access=true' -o "$msg")
 
 if [ "$mode" = "resume" ]; then
   timeout 3600 codex exec resume --last "${opts[@]}" "$prompt" >> "$log" 2>&1
