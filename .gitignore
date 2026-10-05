@@ -1,0 +1,11 @@
+.codex/
+__pycache__/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+data/
+datasets/
+checkpoints/
+wandb/
+.venv/
