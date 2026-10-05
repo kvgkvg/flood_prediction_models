@@ -31,7 +31,8 @@ def main():
             paths.append(path)
         for path in paths:
             with rasterio.open(path) as src:
-                b=src.bounds; left=max(w,b.left); bottom=max(s,b.bottom); right=min(e,b.right); top=min(n,b.top)
+                b=src.bounds; pad=0.0002
+                left=max(w-pad,b.left); bottom=max(s-pad,b.bottom); right=min(e+pad,b.right); top=min(n+pad,b.top)
                 if left>=right or bottom>=top: continue
                 win=from_bounds(left,bottom,right,top,src.transform).round_offsets().round_lengths()
                 arr=src.read(window=win); trans=src.window_transform(win); profile=src.profile.copy(); profile.update(width=arr.shape[2],height=arr.shape[1],transform=trans,compress='deflate')

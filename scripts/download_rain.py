@@ -1,92 +1,138 @@
 #!/usr/bin/env python3
-"""Fetch Open-Meteo ERA5 precipitation on its native quarter-degree grid.
+"""Quota-aware, resumable Open-Meteo archive precipitation downloader.
 
-Each batch requests 2002-01-01 through yesterday once and writes one Parquet per
-point. Returned grid coordinates are retained to document actual grid snapping.
+No API call is made on import. Default model is ERA5; --model ecmwf_ifs is
+available as a separate later pass. Local hourly/daily weighted budgets persist.
 """
-from datetime import date, timedelta
+from __future__ import annotations
+import argparse, json, math, time
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-import json, math, time
 import pandas as pd
 import requests
 from floodrisk.cities import CITIES
 
-BASE=Path('data/raw/open_meteo')
-API='https://archive-api.open-meteo.com/v1/archive'
-VARS=['precipitation','rain']
-MODEL='era5'
-GRID=0.25
-BATCH_SIZE=8
+API = 'https://archive-api.open-meteo.com/v1/archive'
+STATE = Path('data/raw/open_meteo/.quota_state.json')
+UA = 'floodrisk-hackathon/0.1 (Open-Meteo historical data client)'
+LIMIT_HOUR, LIMIT_DAY = 4000, 9000
+MODELS = {'era5': (0.25, date(2002,1,1)), 'ecmwf_ifs': (0.08, date(2017,1,1))}
 
-def points_for_bbox(b):
-    w,s,e,n=b
-    # ERA5 native grid is 0.25 degrees; request only grid nodes inside bbox.
-    def axis(lo,hi):
-        first=math.ceil(lo/GRID-1e-10)*GRID
-        vals=[]; v=first
-        while v<=hi+1e-9:
-            vals.append(round(v,3)); v+=GRID
-        return vals
-    return [(lat,lon) for lat in axis(s,n) for lon in axis(w,e)]
+def request_points(bbox, model='era5'):
+    """Candidate grid centers at native nominal spacing; API returned centers dedupe cells."""
+    w,s,e,n=bbox; step=MODELS[model][0]
+    # For ERA5, exact quarter-degree grid. IFS is ~9 km; use ~0.08 degrees.
+    if model == 'era5':
+        def axis(lo,hi):
+            # Cell centers up to half a cell beyond a bbox edge still intersect it.
+            k=math.ceil((lo-step/2)/step-1e-10); upper=hi+step/2
+            return [round(k*step+i*step,4) for i in range(int(math.floor((upper-k*step)/step+1e-9))+1)]
+        ys=axis(s,n); xs=axis(w,e)
+    else:
+        lat0=math.ceil((s-step/2)/step-1e-10)*step; lonstep=step/max(.1,math.cos(math.radians((s+n)/2)))
+        ys=[]; v=lat0
+        while v<=n+step/2: ys.append(round(v,4)); v+=step
+        lon0=math.ceil((w-lonstep/2)/lonstep-1e-10)*lonstep; xs=[]; v=lon0
+        while v<=e+lonstep/2: xs.append(round(v,4)); v+=lonstep
+    return [(y,x) for y in ys for x in xs]
 
-def valid_cache(path):
-    if not path.exists(): return False
+def weight(start, end, locations=1, variables=1):
+    return locations*math.ceil(((end-start).days+1)/14)*math.ceil(variables/10)
+
+def quota_state(now=None):
+    now=now or time.time(); dt=datetime.fromtimestamp(now,timezone.utc)
+    hour=int(dt.replace(minute=0,second=0,microsecond=0).timestamp())
+    day=int(dt.replace(hour=0,minute=0,second=0,microsecond=0).timestamp())
+    try: x=json.loads(STATE.read_text())
+    except (OSError,ValueError): x={}
+    if x.get('hour_epoch') != hour: x.update(hour_epoch=hour,hour_weight=0)
+    if x.get('day_epoch') != day: x.update(day_epoch=day,day_weight=0)
+    return x
+
+def persist_state(x):
+    STATE.parent.mkdir(parents=True,exist_ok=True); tmp=STATE.with_suffix('.tmp')
+    tmp.write_text(json.dumps(x,sort_keys=True)); tmp.replace(STATE)
+
+def wait_for_budget(w, now_fn=time.time, sleep_fn=time.sleep):
+    while True:
+        now=now_fn(); x=quota_state(now)
+        if x['hour_weight']+w<=LIMIT_HOUR and x['day_weight']+w<=LIMIT_DAY:
+            x['hour_weight']+=w; x['day_weight']+=w; persist_state(x); return
+        dt=datetime.fromtimestamp(now,timezone.utc)
+        until=(dt.replace(minute=0,second=0,microsecond=0)+timedelta(hours=1)).timestamp()+1
+        if x['day_weight']+w>LIMIT_DAY:
+            until=(dt.replace(hour=0,minute=0,second=0,microsecond=0)+timedelta(days=1)).timestamp()+1
+        sleep_fn(max(1,until-now))
+
+def valid_chunk(path):
     try:
-        df=pd.read_parquet(path,columns=['precipitation','model'])
-        return not df.empty and df['precipitation'].notna().any() and (df['model']=='ERA5').all()
+        d=pd.read_parquet(path,columns=['precipitation','latitude_returned','longitude_returned'])
+        return len(d)>0 and d.precipitation.notna().any() and d.latitude_returned.notna().all() and d.longitude_returned.notna().all()
     except Exception: return False
 
+def chunks(end, model):
+    start=max(date(2002,1,1),MODELS[model][1])
+    # All cities' recent years first, then historical years 2002-2009.
+    recent=[]; old=[]
+    for slug, city in CITIES.items():
+        for lat,lon in request_points(city.bbox,model):
+            for year in range(start.year,end.year+1):
+                a=max(start,date(year,1,1)); b=min(end,date(year,12,31))
+                dest=Path('data/raw/open_meteo' if model=='era5' else 'data/raw/open_meteo_ecmwf_ifs')/slug/f'{lat:.4f}_{lon:.4f}_{year}.parquet'
+                item=(slug,lat,lon,a,b,dest)
+                (recent if year>=2010 else old).append(item)
+    return recent+old
+
 def main():
-    end=date.today()-timedelta(days=1)
-    session=requests.Session()
-    for slug,city in CITIES.items():
-        points=points_for_bbox(city.bbox)
-        print(f'{slug}: {len(points)} grid points; ERA5 nominal 0.25 degree; requested 2002-01-01..{end}',flush=True)
-        missing=[]
-        for lat,lon in points:
-            path=BASE/slug/f'{lat:.2f}_{lon:.2f}.parquet'
-            if not valid_cache(path): missing.append((lat,lon,path))
-        for i in range(0,len(missing),BATCH_SIZE):
-            batch=missing[i:i+BATCH_SIZE]
-            params={'latitude':','.join(str(x[0]) for x in batch),
-                    'longitude':','.join(str(x[1]) for x in batch),
-                    'start_date':'2002-01-01','end_date':end.isoformat(),
-                    'hourly':','.join(VARS),'timezone':'Asia/Ho_Chi_Minh','models':MODEL}
-            response=None
-            for attempt in range(7):
-                response=session.get(API,params=params,timeout=240)
-                if response.status_code == 429 and 'Hourly API request limit exceeded' in response.text:
-                    print(f'Open-Meteo hourly quota exhausted: {response.text[:500]}',flush=True)
-                    raise RuntimeError(f'Open-Meteo hourly request quota reset required; cached Parquets retained: {response.url}')
-                if response.status_code == 429 or response.status_code in (502,503,504):
-                    delay=61 if response.status_code == 429 else min(60,10*(attempt+1)); print(f'Open-Meteo HTTP {response.status_code}: {response.text[:500]}; backing off {delay}s',flush=True); time.sleep(delay); continue
-                break
-            response.raise_for_status()
-            records=response.json()
-            if isinstance(records,dict): records=[records]
-            if len(records)!=len(batch): raise RuntimeError(f'API returned {len(records)} locations for batch of {len(batch)}')
-            for ((lat,lon,path),record) in zip(batch,records):
-                hourly=record.get('hourly',{})
-                frame=pd.DataFrame(hourly)
-                if frame.empty: raise RuntimeError(f'Empty hourly response for {lat},{lon}')
-                frame.insert(0,'time',pd.to_datetime(frame.pop('time')))
-                frame['latitude_returned']=record.get('latitude')
-                frame['longitude_returned']=record.get('longitude')
-                frame['elevation_returned_m']=record.get('elevation')
-                frame['requested_latitude']=lat; frame['requested_longitude']=lon
-                frame['model']='ERA5'; frame['nominal_grid_resolution']='0.25 degree'
-                path.parent.mkdir(parents=True,exist_ok=True)
-                frame.to_parquet(path,index=False)
-                print(f'{path}: rows={len(frame)} snapped={record.get("latitude")},{record.get("longitude")}',flush=True)
-            time.sleep(61)
-        # Empirical coordinates confirm the actual returned model grid step.
-        returned=[]
-        for lat,lon in points:
-            p=BASE/slug/f'{lat:.2f}_{lon:.2f}.parquet'
-            if p.exists():
-                df=pd.read_parquet(p,columns=['latitude_returned','longitude_returned'])
-                returned.append((float(df.latitude_returned.iloc[0]),float(df.longitude_returned.iloc[0])))
-        lats=sorted({x[0] for x in returned}); lons=sorted({x[1] for x in returned})
-        print(f'{slug}: returned grid latitude steps={sorted({round(b-a,5) for a,b in zip(lats,lats[1:])})}; longitude steps={sorted({round(b-a,5) for a,b in zip(lons,lons[1:])})}',flush=True)
+    ap=argparse.ArgumentParser(); ap.add_argument('--model',choices=MODELS,default='era5'); args=ap.parse_args()
+    model=args.model; end=date.today()-timedelta(days=1); session=requests.Session(); session.headers.update({'User-Agent':UA,'Accept':'application/json'})
+    print(f'model={model.upper()} nominal_native_resolution={MODELS[model][0]} degrees; variable=precipitation; API-returned latitude/longitude are stored for actual-cell deduplication',flush=True)
+    cell_owner={slug:{} for slug in CITIES}; resolved={}; rows=chunks(end,model)
+    for i,(slug,lat,lon,a,b,path) in enumerate(rows,1):
+        key=(slug,lat,lon)
+        if key in resolved and cell_owner[slug].get(resolved[key]) != key:
+            print(f'chunk {i}/{len(rows)} {slug} ({lat:.4f},{lon:.4f}) {a}..{b}: duplicate returned grid cell {resolved[key]}; skipped',flush=True)
+            continue
+        if path.exists() and valid_chunk(path):
+            cached=pd.read_parquet(path,columns=['latitude_returned','longitude_returned'])
+            returned=(round(float(cached.latitude_returned.iloc[0]),5),round(float(cached.longitude_returned.iloc[0]),5))
+            owner=cell_owner[slug].get(returned)
+            if owner is not None and owner!=key:
+                resolved[key]=returned
+                print(f'chunk {i}/{len(rows)} {slug} ({lat:.4f},{lon:.4f}) {a}..{b}: cached duplicate cell {returned}; skipped',flush=True)
+                continue
+            cell_owner[slug][returned]=key; resolved[key]=returned
+        else:
+            w=weight(a,b)
+            wait_for_budget(w)
+            params={'latitude':lat,'longitude':lon,'start_date':a.isoformat(),'end_date':b.isoformat(),'hourly':'precipitation','timezone':'Asia/Ho_Chi_Minh','models':model}
+            while True:
+                try: response=session.get(API,params=params,timeout=180)
+                except requests.RequestException as e:
+                    print(f'chunk {i}/{len(rows)} {slug} {lat},{lon} {a}..{b}: request error {e}; retry in 60s',flush=True); time.sleep(60); wait_for_budget(w); continue
+                if response.status_code==429:
+                    state=quota_state(); state['hour_weight']=LIMIT_HOUR; persist_state(state)
+                    now=time.time(); dt=datetime.fromtimestamp(now,timezone.utc); target=(dt.replace(minute=0,second=0,microsecond=0)+timedelta(hours=1)).timestamp()+1
+                    state['day_weight']=max(0,state.get('day_weight',0)-w); persist_state(state)
+                    delay=max(1,target-now); print(f'chunk {i}/{len(rows)} HTTP 429; sleeping {delay:.0f}s to next UTC hour; {response.text[:500]}',flush=True); time.sleep(delay); wait_for_budget(w); continue
+                if response.status_code in (502,503,504):
+                    delay=30; print(f'chunk {i}/{len(rows)} HTTP {response.status_code}; retry in {delay}s: {response.text[:500]}',flush=True); time.sleep(delay); wait_for_budget(w); continue
+                try: response.raise_for_status()
+                except requests.RequestException as e:
+                    print(f'chunk {i}/{len(rows)} FAILED {response.url}: {e}; body={response.text[:1200]}',flush=True); raise
+                obj=response.json(); record=(obj[0] if isinstance(obj,list) else obj)
+                hourly=record.get('hourly') or {}; frame=pd.DataFrame(hourly)
+                if frame.empty or 'precipitation' not in frame or frame.precipitation.isna().all():
+                    print(f'chunk {i}/{len(rows)} INVALID (empty/null); not writing; retry in 60s',flush=True); time.sleep(60); wait_for_budget(w); continue
+                returned=(round(float(record.get('latitude')),5),round(float(record.get('longitude')),5))
+                owner=cell_owner[slug].get(returned)
+                if owner is not None and owner!=key:
+                    resolved[key]=returned
+                    print(f'chunk {i}/{len(rows)} duplicate returned cell {returned}; discarded',flush=True); break
+                cell_owner[slug][returned]=key; resolved[key]=returned
+                frame.insert(0,'time',pd.to_datetime(frame.pop('time'))); frame['latitude_returned']=returned[0]; frame['longitude_returned']=returned[1]
+                frame['requested_latitude']=lat; frame['requested_longitude']=lon; frame['model']=model.upper(); frame['nominal_grid_resolution']=f'{MODELS[model][0]} degree' if model=='era5' else '9 km'
+                path.parent.mkdir(parents=True,exist_ok=True); frame.to_parquet(path,index=False); break
+        print(f'chunk {i}/{len(rows)} {slug} ({lat:.4f},{lon:.4f}) {a}..{b} weight={weight(a,b)} cached={path.exists() and valid_chunk(path)} returned_cells={len(cell_owner[slug])}',flush=True)
 
 if __name__=='__main__': main()

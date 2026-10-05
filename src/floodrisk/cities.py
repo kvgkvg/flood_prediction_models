@@ -16,7 +16,10 @@ CITIES = {
     ),
     "da_nang": City(
         "da_nang", "Đà Nẵng, Vietnam",
-        (108.05, 15.93, 108.35, 16.16),
+        # 2 km projected buffer around dated pre-2025 portal reports, unioned
+        # with the initial urban-core box. Locked report coordinates are not
+        # consulted when deriving this working extent.
+        (108.0331223, 15.8181984, 108.35, 16.1601221),
         (107.1922534859, 14.9332972088, 109.0421847443, 16.3520559807),
     ),
 }
