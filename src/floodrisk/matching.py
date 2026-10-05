@@ -25,7 +25,7 @@ def _parse_street(raw):
 
 def match_records(records,routes_by_city):
     # Locked records are filtered before any spatial or text matching.
-    eligible=records.loc[records.split.isin(['train','undated'])].copy()
+    eligible=records.loc[records.split.isin(['train','train_undated'])].copy()
     outputs=[]
     for city,df in eligible.groupby('city',sort=True):
         routes=routes_by_city[city].copy()

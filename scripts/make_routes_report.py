@@ -31,9 +31,9 @@ def main():
     root=Path('data/processed'); rec=gpd.read_parquet(root/'flood_records.parquet')
     matches=pd.read_parquet(root/'flood_record_matches.parquet')
     # Do not inspect locked record fields beyond permitted aggregate date/row counts.
-    locked=rec.loc[rec.split.eq('test_locked'),['city','date']]
-    train=rec.loc[rec.split.isin(['train','undated'])].merge(matches,on=['record_id','city'],how='left')
-    lines=['# Routes and flood-label audit','',f'Reproducible command: `PYTHONPATH=src .venv/bin/python scripts/make_routes_report.py` (bootstrap seed {SEED}; 2,000 draws for rates, 600 for positive-route counts).','', 'All label/matching summaries use train + undated records only. The locked split is shown only as per-city record and distinct-date counts. Exact route totals are census counts of the cached OSM extract; uncertainty intervals are not meaningful for these finite totals.','']
+    locked=rec.loc[rec.split.isin(['test_locked','test_locked_undated']),['city','split','date']]
+    train=rec.loc[rec.split.isin(['train','train_undated'])].merge(matches,on=['record_id','city'],how='left')
+    lines=['# Routes and flood-label audit','',f'Reproducible command: `PYTHONPATH=src .venv/bin/python scripts/make_routes_report.py` (bootstrap seed {SEED}; 2,000 draws for rates, 600 for positive-route counts).','', 'All label/matching summaries use train + train_undated records only. Both locked splits are shown only as per-city counts; distinct dates are counted only for test_locked rows with a date. Exact route totals are census counts of the cached OSM extract; uncertainty intervals are not meaningful for these finite totals.','']
     totals={}
     for city in ('ho_chi_minh','da_nang'):
         routes=gpd.read_parquet(root/city/'routes.parquet'); labels=pd.read_parquet(root/city/'route_labels.parquet')
@@ -52,21 +52,26 @@ def main():
         for r in unmatched.head(15).itertuples(): lines.append(f"  - {r.record_id}: {str(r.road_name_text_raw)[:180]}")
         for flag,cause in [('ever_flood_rain','rain'),('ever_flood_tide','tide')]:
             positives=labels.loc[labels[flag].astype(bool)].merge(routes[['route_id','highway_class']],on='route_id',how='left')
+            universe=routes[['route_id','in_universe']]
+            pos_universe=labels.loc[labels[flag].astype(bool)].merge(universe,on='route_id',how='left')
+            outside=int((~pos_universe.in_universe.fillna(False)).sum())
             total=len(positives); pcts=positives.highway_class.value_counts().to_dict()
             classshare=(positives.highway_class.value_counts(normalize=True)*100).round(1).to_dict()
             allshares=(routes.highway_class.value_counts(normalize=True)*100).round(1).to_dict()
             lo_pos,hi_pos=rate_ci(total,len(routes),seed=SEED+len(city)+len(cause))
-            lines.append(f"- Positive {cause} routes: {total}/{len(routes)} ({total/len(routes):.2%}; route-bootstrap 95% interval [{lo_pos:.2%}, {hi_pos:.2%}]); counts by highway class {pcts}; positive-class shares (%) {classshare}; all-route class shares (%) {allshares}.")
+            lines.append(f"- Positive {cause} routes: {total}/{len(routes)} ({total/len(routes):.2%}; route-bootstrap 95% interval [{lo_pos:.2%}, {hi_pos:.2%}]); {outside} positives outside modelling universe. Counts by highway class {pcts}; positive-class shares (%) {classshare}; all-route class shares (%) {allshares}.")
             totals[(city,cause)]=total
         if city=='da_nang':
             dated=tr.loc[tr.date.notna()]; day=pd.to_datetime(dated.date).dt.date
             on=dated.loc[day.eq(pd.Timestamp('2022-10-14').date())]
             lines.append(f"- 2022-10-14 concentration: {len(on)} eligible records, {on.route_id.nunique()} distinct matched routes, among {len(dated)} dated eligible records ({len(on)/len(dated) if len(dated) else 0:.1%}).")
         lock=locked.loc[locked.city.eq(city)]
-        dates=pd.to_datetime(lock.date,errors='coerce').dropna()
-        lines.append(f"- Locked split counts only: {len(lock)} records; {dates.dt.date.nunique()} distinct dates.")
+        exact=lock.loc[lock.split.eq('test_locked'),['date']]
+        dates=pd.to_datetime(exact.date,errors='coerce').dropna()
+        undated_count=int(lock.split.eq('test_locked_undated').sum())
+        lines.append(f"- Locked counts only: test_locked {len(exact)} records / {dates.dt.date.nunique()} dates; test_locked_undated {undated_count} records.")
         lines.append('')
-    lines += ['## Assumptions','', '- Da Nang flood reports are classified as rain (`cause_assumed=True`). All source rows are treated as flood observations; records without dates are retained for route-level labels but have no date in the first/last-date summary.','- IRD cause text maps to rain/tide/combined by keyword; unmatched or empty values become unknown. Da Nang text is assumed to name a road when parsed from the first address segment.','- Location precision is inferred from source location type/geocoding method/precision fields; raw source values remain in the table. The hard HCMC bbox clamp is retained; non-locked source points are asserted inside it while locked row geometries are stored without per-row spatial validation.','- Named route fuzzy matching uses normalized sequence/token similarity >= 0.55; otherwise the nearest route within 40 m is used. Street/area records search named routes through 500 m.','- Unnamed route connectivity uses line intersections and a 2 m snapping tolerance in metric UTM; road-grade separation is not available in the OSM attributes used here. All reported counts are deterministic counts of these OSM downloads unless identified as bootstrap intervals.','']
+    lines += ['## Assumptions','', '- Da Nang flood reports are classified as rain (`cause_assumed=True`). All source rows are treated as flood observations; non-locked records without dates are retained for route-level labels but do not contribute to date summaries.','- IRD cause text maps to rain/tide/combined by keyword; unmatched or empty values become unknown. Da Nang text is assumed to name a road when parsed from the first address segment.','- Location precision is inferred from source location type/geocoding method/precision fields; raw source values remain in the table. The hard HCMC bbox clamp is retained; source points are preserved without relocation or dropping.','- Named route fuzzy matching uses normalized sequence/token similarity >= 0.55; otherwise the nearest route within 40 m is used. Street/area records search named routes through 500 m.','- Unnamed route connectivity uses line intersections and a 2 m snapping tolerance in metric UTM; road-grade separation is not available in the OSM attributes used here. All reported counts are deterministic counts of these OSM downloads unless identified as bootstrap intervals.','']
     out=Path('reports/routes_and_labels.md');out.write_text('\n'.join(lines)+'\n')
     print(f'wrote {out}; positives={totals}')
 if __name__=='__main__':main()

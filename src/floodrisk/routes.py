@@ -1,6 +1,6 @@
 """Build stable street/ward route units from cached OSM ways."""
 from __future__ import annotations
-import json, math, re
+import json, math, re, hashlib
 from collections import defaultdict, Counter
 from pathlib import Path
 import geopandas as gpd
@@ -12,6 +12,7 @@ from floodrisk.records import normalize_name, stable_route_id
 
 VEHICLE={'motorway','trunk','primary','secondary','tertiary','unclassified','residential','living_street','service'}
 ALLOW=VEHICLE|{x+'_link' for x in VEHICLE}
+UNIVERSE_HIGHWAY=(VEHICLE-{'service'})|{x+'_link' for x in VEHICLE-{'service'}}
 
 def _lines(g):
     if g is None or g.is_empty:return []
@@ -66,7 +67,12 @@ def _emit_pieces(pieces,city,out,rel):
     for (ward,_hwy),ps in unnamed_by.items():
         for comp in _component_groups(ps):groups.append((comp[0]['ward'],'',False,comp))
     for ward,norm,named,ps in groups:
-        ids=sorted(set(p['way_id'] for p in ps)); rid=stable_route_id(city,ward,norm,named,ids)
+        ids=sorted(set(p['way_id'] for p in ps))
+        # The same OSM way may be split into disconnected pieces inside one
+        # ward/cell. Include canonical clipped geometry in unnamed ids so those
+        # components remain distinct and route_id stays unique on rebuilds.
+        geom_signature=hashlib.sha1('|'.join(sorted(p['geom'].wkb_hex for p in ps)).encode()).hexdigest()
+        rid=stable_route_id(city,ward,norm,named,ids if named else ids+['geom:'+geom_signature])
         lengths=defaultdict(float)
         for p in ps:lengths[p['highway']]+=p['geom'].length
         hw=max(lengths,key=lengths.get)
@@ -76,7 +82,7 @@ def _emit_pieces(pieces,city,out,rel):
         denom=sum(p['geom'].length for p in ps)
         bridge=sum(p['geom'].length for p in ps if p['tags'].get('bridge','no') not in ('no','false','0'))/denom
         tunnel=sum(p['geom'].length for p in ps if p['tags'].get('tunnel','no') not in ('no','false','0'))/denom
-        out.append({'route_id':rid,'name':_mode(p['name'] for p in ps) if named else None,'name_norm':norm or None,'ward_id':ward,'named':named,'highway_class':hw,'length_m':total,'n_ways':len(ids),'bridge_frac':bridge,'tunnel_frac':tunnel,'lanes':_mode(p['tags'].get('lanes') for p in ps),'maxspeed':_mode(p['tags'].get('maxspeed') for p in ps),'surface':_mode(p['tags'].get('surface') for p in ps),'geometry':geom})
+        out.append({'route_id':rid,'name':_mode(p['name'] for p in ps) if named else None,'name_norm':norm or None,'ward_id':ward,'named':named,'highway_class':hw,'length_m':total,'n_ways':len(ids),'bridge_frac':bridge,'tunnel_frac':tunnel,'lanes':_mode(p['tags'].get('lanes') for p in ps),'maxspeed':_mode(p['tags'].get('maxspeed') for p in ps),'surface':_mode(p['tags'].get('surface') for p in ps),'in_universe':hw in UNIVERSE_HIGHWAY and total>=30,'geometry':geom})
         rel.extend({'way_id':wid,'route_id':rid} for wid in ids)
 
 def build_routes(city,root=Path('.')):

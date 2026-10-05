@@ -32,9 +32,13 @@ def _precision(location_type,method,raw):
     if any(k in s for k in ('point','high','medium','low')): return 'point'
     return 'unknown'
 
-def _split(d):
-    if pd.isna(d): return 'undated'
-    return 'test_locked' if pd.Timestamp(d).date().isoformat()>='2025-01-01' else 'train'
+def _split(d, year=None):
+    if not pd.isna(d):
+        return 'test_locked' if pd.Timestamp(d).date().isoformat()>='2025-01-01' else 'train'
+    try: y=int(float(year))
+    except (TypeError,ValueError): y=None
+    if y is not None and y>=2025:return 'test_locked_undated'
+    return 'train_undated'
 
 def _cause(v):
     s=str(v or '').strip().casefold()
@@ -61,7 +65,7 @@ def build_records(root=Path('.')):
             d=pd.to_datetime(r.Date,errors='coerce'); geom=r.geometry
             if geom is None or geom.is_empty: continue
             lon,lat=geom.x,geom.y
-            splitv=_split(d)
+            splitv=_split(d,r.Year)
             # Preserve the source point when the hard bbox clamp excludes it;
             # changing its position or dropping the event would corrupt evidence.
             dep=pd.to_numeric(pd.Series([r.Water_height_max_cm]),errors='coerce').iloc[0]
@@ -87,7 +91,7 @@ def build_records(root=Path('.')):
     return gpd.GeoDataFrame(frame,geometry='geometry',crs=4326)
 
 def build_route_labels(records):
-    df=records.loc[records.split.isin(['train','undated'])].copy()
+    df=records.loc[records.split.isin(['train','train_undated'])].copy()
     if 'route_id' not in df: raise ValueError('route_id must be joined before label aggregation')
     df=df.loc[df.route_id.notna()]
     def aggregate(g):
