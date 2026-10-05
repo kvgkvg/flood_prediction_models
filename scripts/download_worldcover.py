@@ -6,22 +6,17 @@ import requests
 import rasterio
 from rasterio.windows import from_bounds
 
-INDEX='https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/esa_worldcover_2021_grid.geojson'
 BASE='https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map'
 ROOT=Path('data/raw/esa_worldcover'); OUT=Path('data/interim/landcover')
 def main():
     bboxes=json.loads(Path('data/raw/osm/city_bboxes.json').read_text()); ROOT.mkdir(parents=True,exist_ok=True); OUT.mkdir(parents=True,exist_ok=True)
-    idx=ROOT/'grid.geojson'
-    if not idx.exists():
-        r=requests.get(INDEX,timeout=60); r.raise_for_status(); idx.write_bytes(r.content)
-    features=json.loads(idx.read_text())['features']
     for slug,info in bboxes.items():
-        w,s,e,n=info['bbox']; matches=[]
-        from shapely.geometry import shape, box
-        aoi=box(w,s,e,n)
-        for f in features:
-            if shape(f['geometry']).intersects(aoi): matches.append(f['properties'].get('ll_tile') or f['properties'].get('tile'))
-        matches=sorted(set(filter(None,matches))); print(slug,'tiles',matches)
+        w,s,e,n=info['bbox']
+        import math
+        lons=range(math.floor(w/3)*3, math.floor((e-1e-10)/3)*3+1, 3)
+        lats=range(math.floor(s/3)*3, math.floor((n-1e-10)/3)*3+1, 3)
+        def tag(v,axis): return ('N' if v>=0 else 'S')+f'{abs(v):02d}' if axis=='lat' else ('E' if v>=0 else 'W')+f'{abs(v):03d}'
+        matches=sorted({tag(lat,'lat')+tag(lon,'lon') for lat in lats for lon in lons}); print(slug,'tiles',matches)
         paths=[]
         for tile in matches:
             path=ROOT/f'ESA_WorldCover_10m_2021_v200_{tile}_Map.tif'

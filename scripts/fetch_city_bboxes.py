@@ -30,7 +30,15 @@ def main():
         project = Transformer.from_crs('EPSG:4326','EPSG:32648',always_xy=True).transform
         unproject = Transformer.from_crs('EPSG:32648','EPSG:4326',always_xy=True).transform
         buffered = transform(unproject, transform(project, geom).buffer(2000))
-        result[slug] = {'bbox': list(buffered.bounds), 'osm_type': item.get('osm_type'), 'osm_id': item.get('osm_id'), 'display_name': item.get('display_name'), 'buffer_m':2000}
+        result[slug] = {
+            'bbox': list(city.bbox),
+            'admin_bbox': list(city.admin_bbox),
+            'osm_boundary_bbox_2km': list(buffered.bounds),
+            'osm_type': item.get('osm_type'), 'osm_id': item.get('osm_id'),
+            'display_name': item.get('display_name'),
+            'urban_bbox_derivation': 'configured in src/floodrisk/cities.py',
+            'admin_buffer_m': 2000,
+        }
     (OUT/'city_bboxes.json').write_text(json.dumps(result, indent=2, ensure_ascii=False))
     print(json.dumps(result, ensure_ascii=False))
 if __name__=='__main__': main()

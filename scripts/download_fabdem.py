@@ -26,6 +26,17 @@ def main():
         r=sess.head(url,allow_redirects=True,timeout=60); r.raise_for_status(); sizes[key]=int(r.headers.get('content-length',0))
     total=sum(sizes.values()); print('required tiles',len(tiles),'aggregate bytes',total)
     if not total or total>=12*1024**3: raise SystemExit('FABDEM needed tile size unknown or >=12 GiB; no download')
+    # Measure an actual ranged transfer before writing more data. Include only
+    # bytes still needed for incomplete tiles in the ETA.
+    first_url=next(iter(tiles.values())); import time
+    t0=time.monotonic()
+    with sess.get(first_url,headers={'Range':'bytes=0-1048575'},stream=True,allow_redirects=True,timeout=60) as r:
+        r.raise_for_status(); sampled=sum(len(c) for c in r.iter_content(256*1024) if c)
+    speed=sampled/max(time.monotonic()-t0,0.01)
+    remain=sum(max(0,size-((ROOT/key[0]/key[1]).stat().st_size if (ROOT/key[0]/key[1]).exists() else 0)) for key,size in sizes.items())
+    eta=remain/max(speed,1)
+    print(f'FABDEM sample={sampled} B speed={speed:.0f} B/s; remaining={remain} B; ETA={eta:.0f} s; sample URL={first_url}')
+    if eta>=900: raise SystemExit(f'FABDEM below 15-minute speed threshold; size={total} B; URL={first_url}; resumable files retained')
     for (group,tile),url in tiles.items():
         dest=ROOT/group/tile; dest.parent.mkdir(parents=True,exist_ok=True)
         if dest.exists() and dest.stat().st_size==sizes[(group,tile)]: continue
@@ -45,7 +56,7 @@ def main():
                 group,tile,_=url_for(lat,lon); paths.append(ROOT/group/tile)
         srcs=[rasterio.open(p) for p in paths]
         try:
-            data,transform=merge(srcs,bounds=(w,s,e,n)); profile=srcs[0].profile.copy();profile.update(width=data.shape[2],height=data.shape[1],transform=transform,compress='deflate')
+            pad=0.0001; data,transform=merge(srcs,bounds=(w-pad,s-pad,e+pad,n+pad)); profile=srcs[0].profile.copy();profile.update(width=data.shape[2],height=data.shape[1],transform=transform,compress='deflate')
             OUT.mkdir(parents=True,exist_ok=True)
             with rasterio.open(OUT/f'{slug}_fabdem_v1_2.tif','w',**profile) as dst:dst.write(data)
         finally:

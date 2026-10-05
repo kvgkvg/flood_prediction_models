@@ -33,7 +33,8 @@ def main():
                 paths.append(path)
         sources=[rasterio.open(p) for p in paths]
         try:
-            mosaic,trans=merge(sources,bounds=(w,s,e,n))
+            pad=0.0001
+            mosaic,trans=merge(sources,bounds=(w-pad,s-pad,e+pad,n+pad))
             profile=sources[0].profile.copy(); profile.update(height=mosaic.shape[1],width=mosaic.shape[2],transform=trans,compress='deflate',tiled=True)
             raw=OUT/f'{slug}_copernicus_glo30.tif'; raw.parent.mkdir(parents=True,exist_ok=True)
             with rasterio.open(raw,'w',**profile) as dst: dst.write(mosaic)
