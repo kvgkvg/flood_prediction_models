@@ -7,6 +7,12 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 from pyproj import CRS
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.model_selection import StratifiedKFold
 
 SEED=41073; BOOTSTRAPS=1000; CITY_ORDER=('ho_chi_minh','da_nang')
 FORBIDDEN={'route_id','geometry','name','name_norm','ward_id','district_id','lat','lon','x','y','block_id','fold','city','highway_class'}
@@ -108,7 +114,7 @@ def bootstrap_metrics(y,scores,highway,builtup=None,positive_variant=None,draws=
                 if np.isfinite(gm['recall']):ha+=gm['recall']*pa.sum()
             vals['non_event_strat_recall_at_10'].append(ha/max(1,float(np.sum(w*alt))))
     intervals={k:[float(np.nanquantile(v,.025)),float(np.nanquantile(v,.975))] if np.isfinite(v).any() else [np.nan,np.nan] for k,v in vals.items()}
-    return point,intervals
+    return point,intervals,vals
 
 def make_folds(city,routes,folds=5,seed=SEED):
     zone=48 if city=='ho_chi_minh' else 49
@@ -122,7 +128,11 @@ def make_folds(city,routes,folds=5,seed=SEED):
     return np.asarray([assign[b] for b in block],dtype=int)
 
 def load_data(city):
-    root=Path('data/processed');features=pd.read_parquet(root/city/'route_features.parquet');routes=gpd.read_parquet(root/city/'routes.parquet',columns=['route_id','highway_class','geometry']);labels=pd.read_parquet(root/city/'route_labels.parquet')
+    root=Path('data/processed');paths=[root/city/'route_features.parquet',root/city/'routes.parquet',root/city/'route_labels.parquet']
+    sig=hashlib.sha256('|'.join(f'{p.stat().st_size}:{p.stat().st_mtime_ns}' for p in paths).encode()).hexdigest()[:16]
+    cp=root/'m1_cache';cp.mkdir(parents=True,exist_ok=True);cached=cp/f'frame_{city}_{sig}.pkl'
+    if cached.exists():return pd.read_pickle(cached)
+    features=pd.read_parquet(paths[0]);routes=gpd.read_parquet(paths[1],columns=['route_id','highway_class','geometry']);labels=pd.read_parquet(paths[2])
     frame=features.loc[features.in_universe.astype(bool)].merge(routes[['route_id','highway_class','geometry']],on='route_id',how='inner',validate='one_to_one')
     if frame.route_id.duplicated().any():raise ValueError('duplicate route keys')
     frame=frame.merge(labels,on='route_id',how='left',validate='one_to_one',suffixes=('','_label'))
@@ -133,7 +143,7 @@ def load_data(city):
     first=pd.to_datetime(frame.first_date,errors='coerce').dt.date;last=pd.to_datetime(frame.last_date,errors='coerce').dt.date
     event_only=(first==pd.Timestamp('2022-10-14').date())&(last==pd.Timestamp('2022-10-14').date())
     frame['rain_non_event_positive']=frame.ever_flood_rain & ~event_only & (first.notna()|last.notna())
-    return frame
+    frame.to_pickle(cached);return frame
 
 def feature_manifest(city):
     raw=json.loads((Path('data/processed')/city/'feature_manifest.json').read_text())
@@ -168,10 +178,65 @@ def _score_fold(mod,train,test,city,target):
 
 def task_specs():return [('T1','ho_chi_minh','da_nang','ever_flood_rain','transfer'),('T2','da_nang','ho_chi_minh','ever_flood_rain','transfer'),('T3','ho_chi_minh','ho_chi_minh','ever_flood_tide','cv'),('T4','ho_chi_minh','ho_chi_minh','ever_flood_rain','cv'),('T5','da_nang','da_nang','ever_flood_rain','cv')]
 
-def evaluate_scorer(name):
+EXPOSURE_NUM=['lanes','named','road_length_density_500m','road_intersections_300m','lc_builtup_200m_frac','lc_builtup_500m_frac','lc_tree_500m_frac','lc_grass_shrub_500m_frac','lc_cropland_500m_frac','lc_bare_500m_frac']
+def exposure_scores(frame):
+    """Cross-fitted reporting propensity, using only exposure covariates and observed-record presence."""
+    d=frame.copy(); road='road_highway_rank' if 'road_highway_rank' in d else 'highway_class'
+    num=[c for c in EXPOSURE_NUM if c in d]; x=d[num].apply(pd.to_numeric,errors='coerce')
+    named='named' in x
+    if named: x['named']=x['named'].astype(float)
+    if road in d:x['__road']=d[road].astype(str)
+    y=d.n_records.notna().astype(int).to_numpy() if 'n_records' in d else d.sample_weight.gt(.2).astype(int).to_numpy()
+    if len(np.unique(y))<2:return np.full(len(d),float(y.mean() if len(y) else .5))
+    cat=['__road'] if '__road' in x else [];nums=[c for c in x if c not in cat]
+    prep=ColumnTransformer([('num',make_pipeline(SimpleImputer(strategy='median',add_indicator=True),StandardScaler()),nums),('cat',OneHotEncoder(handle_unknown='ignore'),cat)])
+    out=np.zeros(len(d));folds=StratifiedKFold(n_splits=5,shuffle=True,random_state=SEED)
+    for tr,te in folds.split(x,y):
+        model=make_pipeline(prep,LogisticRegression(C=.5,max_iter=150,class_weight='balanced',random_state=SEED))
+        model.fit(x.iloc[tr],y[tr]);out[te]=model.predict_proba(x.iloc[te])[:,1]
+    return out
+
+def _prop_metrics(y,score,prop,urban,draws=BOOTSTRAPS,seed=SEED):
+    y=np.asarray(y,bool);score=np.asarray(score,float);prop=np.asarray(prop,float);n=len(y)
+    strata=pd.qcut(pd.Series(prop).rank(method='first'),q=min(10,max(1,n)),labels=False,duplicates='drop').to_numpy()
+    def calc(w=None):
+        w=np.ones(n) if w is None else w
+        pos_total=float(np.sum(w*y));hit=aucnum=aucden=0.
+        for s in np.unique(strata):
+            m=strata==s; pp=np.flatnonzero(m&y);nn=np.flatnonzero(m&~y)
+            if not len(pp):continue
+            take=max(1,int(np.ceil(.1*m.sum())))
+            order=np.argsort(score[m])[::-1];ix=np.flatnonzero(m)[order[:take]]
+            hit+=float(np.sum(w[ix]*y[ix]));
+            if len(nn) and float(np.sum(w[m]*y[m]))>0 and float(np.sum(w[m]*(~y[m])))>0:
+                from sklearn.metrics import roc_auc_score
+                try:a=roc_auc_score(y[m],score[m],sample_weight=w[m]);aucnum+=a*float(np.sum(w[m]*y[m]));aucden+=float(np.sum(w[m]*y[m]))
+                except ValueError:pass
+        ur=np.flatnonzero(urban); uhit=0.
+        if len(ur):
+            ix=ur[np.argsort(score[ur])[::-1][:max(1,int(np.ceil(.1*len(ur))))]];up=float(np.sum(w[ur]*y[ur]));uhit=float(np.sum(w[ix]*y[ix]))/max(up,1.)
+        return {'prop_recall_at_10':hit/max(pos_total,1.),'prop_auc':aucnum/aucden if aucden else np.nan,'urban_recall_at_10':uhit}
+    point=calc();rng=np.random.default_rng(seed); vals={k:[] for k in point};p=np.flatnonzero(y);q=np.flatnonzero(~y)
+    for _ in range(draws):
+        ix=np.r_[rng.choice(p,len(p),True),rng.choice(q,len(q),True)] if len(p) and len(q) else np.arange(n)
+        w=np.bincount(ix,minlength=n);z=calc(w)
+        for k,v in z.items():vals[k].append(v)
+    ci={k:[float(np.nanquantile(v,.025)),float(np.nanquantile(v,.975))] for k,v in vals.items()}
+    return point,ci,vals
+
+def evaluate_scorer(name,tasks=None,draws=BOOTSTRAPS):
     mod=_load_scorer(name);results={};predictions={};t0=time.time()
     cache={c:load_data(c) for c in CITY_ORDER};folds={c:make_folds(c,cache[c]) for c in CITY_ORDER}
-    for tid,train_city,test_city,target,mode in task_specs():
+    chosen=task_specs() if tasks is None else [x for x in task_specs() if x[0] in tasks]
+    propcache={}
+    for c in CITY_ORDER:
+        cols=[z for z in EXPOSURE_NUM if z in cache[c]]+(['road_highway_rank'] if 'road_highway_rank' in cache[c] else [])+['n_records']
+        sig=hashlib.sha256(pd.util.hash_pandas_object(cache[c][cols],index=False).values.tobytes()).hexdigest()[:16]
+        cp=Path('data/processed/m1_cache');cp.mkdir(parents=True,exist_ok=True);path=cp/f'exposure_{c}_{sig}.npy'
+        if path.exists():propcache[c]=np.load(path)
+        else:propcache[c]=exposure_scores(cache[c]);np.save(path,propcache[c])
+    joint={}
+    for tid,train_city,test_city,target,mode in chosen:
         tr=cache[train_city];te=cache[test_city]
         if mode=='transfer':
             score=_score_fold(mod,tr,te,train_city,target);pred=te.copy();pred['score']=score
@@ -181,12 +246,18 @@ def evaluate_scorer(name):
                 testmask=fold==f;trainmask=~testmask
                 pred.loc[testmask,'score']=_score_fold(mod,te.loc[trainmask],te.loc[testmask],train_city,target)
         y=pred[target].to_numpy(bool);alt=pred.rain_non_event_positive.to_numpy(bool) if tid=='T5' else None
-        point,ci=bootstrap_metrics(y,pred.score.to_numpy(),pred.highway_class,pred.lc_builtup_500m_frac.to_numpy(),alt,seed=SEED+int(tid[1:]))
+        point,ci,rep=bootstrap_metrics(y,pred.score.to_numpy(),pred.highway_class,pred.lc_builtup_500m_frac.to_numpy(),alt,draws=draws,seed=SEED+int(tid[1:]))
+        ep,eci,erep=_prop_metrics(y,pred.score.to_numpy(),propcache[test_city],pred.lc_builtup_500m_frac.to_numpy()>=.5,draws,SEED+int(tid[1:]))
+        point.update(ep);ci.update(eci);joint[tid]={'raw':rep,'prop':erep}
         results[tid]={'point':point,'ci':ci,'n':len(pred),'positives':int(y.sum())}
-        predictions[tid]=pred[['route_id','score',target,'highway_class','lc_builtup_500m_frac']].copy()
-    headline=float(np.mean([results[t]['point']['strat_recall_at_10'] for t in ('T1','T2','T3')]))
-    headline2=float(np.mean([results[t]['point']['strat2_recall_at_10'] for t in ('T1','T2','T3')]))
-    return {'scorer':name,'description':(mod.__doc__ or name).strip().splitlines()[0],'results':results,'HEADLINE':headline,'HEADLINE2':headline2,'runtime_seconds':time.time()-t0,'predictions':predictions,'module':mod,'n_features':getattr(mod,'_eval_n_features',0)}
+        predictions[tid]=pred[['route_id','score',target,'highway_class','lc_builtup_500m_frac']].copy();predictions[tid]['propensity']=propcache[test_city]
+    primary=float(np.mean([results[t]['point']['prop_recall_at_10'] for t in ('T1','T2','T3') if t in results]))
+    headline=float(np.mean([results[t]['point']['strat_recall_at_10'] for t in ('T1','T2','T3') if t in results]))
+    headline2=float(np.mean([results[t]['point']['strat2_recall_at_10'] for t in ('T1','T2','T3') if t in results]))
+    r=np.random.default_rng(SEED);m=min([len(joint[t]['prop']['prop_recall_at_10']) for t in ('T1','T2','T3') if t in joint])
+    pri=np.mean([joint[t]['prop']['prop_recall_at_10'][:m] for t in ('T1','T2','T3') if t in joint],axis=0);hea=np.mean([joint[t]['raw']['strat_recall_at_10'][:m] for t in ('T1','T2','T3') if t in joint],axis=0)
+    primary_ci=np.quantile(pri,[.025,.975]).tolist();headline_ci=np.quantile(hea,[.025,.975]).tolist()
+    return {'scorer':name,'description':(mod.__doc__ or name).strip().splitlines()[0],'results':results,'PRIMARY':primary,'PRIMARY_ci':primary_ci,'HEADLINE':headline,'HEADLINE_ci':headline_ci,'HEADLINE2':headline2,'runtime_seconds':time.time()-t0,'predictions':predictions,'module':mod,'n_features':getattr(mod,'_eval_n_features',0)}
 
 def headline_bootstrap_difference(a,b,draws=BOOTSTRAPS,seed=SEED):
     rng=np.random.default_rng(seed);diffs=[]
@@ -210,19 +281,27 @@ def headline_bootstrap_difference(a,b,draws=BOOTSTRAPS,seed=SEED):
         diffs.append(np.asarray(ta)-np.asarray(tb))
     x=np.mean(diffs,axis=0);return float(x.mean()),[float(np.quantile(x,.025)),float(np.quantile(x,.975))],float(np.mean(x>0))
 
-def append_result(run,git_hash,peak_rss_mb,status='ok'):
+def append_result(run,git_hash,peak_rss_mb,status='ok',decision='baseline',vs_best=''):
     path=Path('reports/m1_results.tsv');path.parent.mkdir(parents=True,exist_ok=True)
-    fields=['timestamp','git_short_hash','scorer','description','HEADLINE','HEADLINE2']
+    fields=['timestamp','git_short_hash','scorer','description','PRIMARY','PRIMARY_ci','HEADLINE','HEADLINE_ci','HEADLINE2']
     for tid,*_ in task_specs():fields += [f'{tid}_strat_recall_at_10',f'{tid}_recall_at_10',f'{tid}_strat_auc',f'{tid}_auc']
-    fields+=['runtime_seconds','peak_rss_mb','n_features','status']
+    fields+=['runtime_seconds','peak_rss_mb','n_features','status','decision','vs_best']
+    if path.exists():
+        old=pd.read_csv(path,sep='\t').fillna('')
+        if 'PRIMARY' not in old.columns:
+            for f in fields:
+                if f not in old:old[f]='baseline' if f=='decision' else ''
+            old=old[fields];old.to_csv(path,sep='\t',index=False)
     if not path.exists():path.write_text('\t'.join(fields)+'\n')
-    vals=[pd.Timestamp.now(tz='Asia/Ho_Chi_Minh').isoformat(),git_hash,run['scorer'],run['description'],f"{run['HEADLINE']:.8f}",f"{run['HEADLINE2']:.8f}"]
+    vals=[pd.Timestamp.now(tz='Asia/Ho_Chi_Minh').isoformat(),git_hash,run['scorer'],run['description'],f"{run['PRIMARY']:.8f}",str(run['PRIMARY_ci']),f"{run['HEADLINE']:.8f}",str(run['HEADLINE_ci']),f"{run['HEADLINE2']:.8f}"]
     for tid,*_ in task_specs():
+        if tid not in run['results']:
+            vals+=['']*4;continue
         p=run['results'][tid]['point'];vals += [f"{p['strat_recall_at_10']:.8f}",f"{p['recall_at_10']:.8f}",f"{p['strat_auc']:.8f}",f"{p['auc']:.8f}"]
-    vals += [f"{run['runtime_seconds']:.3f}",f'{peak_rss_mb:.2f}',str(run.get('n_features',0)),status]
+    vals += [f"{run['runtime_seconds']:.3f}",f'{peak_rss_mb:.2f}',str(run.get('n_features',0)),status,decision,vs_best]
     with path.open('a') as f:f.write('\t'.join(vals)+'\n')
     detail=Path('reports/m1_details.json');old=json.loads(detail.read_text()) if detail.exists() else {}
-    old[run['scorer']]={'HEADLINE':run['HEADLINE'],'HEADLINE2':run['HEADLINE2'],'description':run['description'],'runtime_seconds':run['runtime_seconds'],'peak_rss_mb':peak_rss_mb,'n_features':run.get('n_features',0),'tasks':run['results']}
+    old[run['scorer']]={'PRIMARY':run['PRIMARY'],'PRIMARY_ci':run['PRIMARY_ci'],'HEADLINE':run['HEADLINE'],'HEADLINE_ci':run['HEADLINE_ci'],'HEADLINE2':run['HEADLINE2'],'description':run['description'],'runtime_seconds':run['runtime_seconds'],'peak_rss_mb':peak_rss_mb,'n_features':run.get('n_features',0),'tasks':run['results']}
     detail.write_text(json.dumps(old,indent=2,allow_nan=True))
 
 def run_importance(name,target='ever_flood_rain',city='ho_chi_minh'):
