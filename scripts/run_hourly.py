@@ -42,7 +42,7 @@ def _offline_weather(city,at):
 
 def _live_weather(city,at,model):
     pts=grid(city);url='https://api.open-meteo.com/v1/forecast'
-    params={'latitude':','.join(f'{a:.6f}' for a,b in pts),'longitude':','.join(f'{b:.6f}' for a,b in pts),'hourly':'precipitation','past_hours':72,'forecast_hours':6,'timezone':TZ}
+    params={'latitude':','.join(f'{a:.6f}' for a,b in pts),'longitude':','.join(f'{b:.6f}' for a,b in pts),'hourly':'precipitation','past_hours':72,'forecast_hours':12,'timezone':TZ}
     if model!='best_match':params['models']=model
     session=requests.Session();session.headers.update({'User-Agent':UA,'Accept':'application/json'})
     r=session.get(url,params=params,timeout=90)
