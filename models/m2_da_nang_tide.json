@@ -1,0 +1,11 @@
+{
+  "kind": "zero",
+  "candidate": "no_tide_driver",
+  "city": "da_nang",
+  "cause": "tide",
+  "fit_start": null,
+  "fit_end": null,
+  "max_training_date": null,
+  "n_fit_days": 0,
+  "n_fit_positive_days": 0
+}

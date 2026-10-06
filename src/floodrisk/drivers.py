@@ -20,6 +20,8 @@ def _cell_daily(hourly,lat,lon):
     # Preserve actual missing hours as missing; do not silently impute them to zero.
     rain=pd.to_numeric(d.precipitation,errors='coerce').astype(float)
     roll3=rain.rolling(3,min_periods=3).sum();roll6=rain.rolling(6,min_periods=6).sum()
+    # Rolling windows are confined to each local calendar day, as at run time.
+    roll3.loc[d.index.hour<2]=np.nan;roll6.loc[d.index.hour<5]=np.nan
     out=pd.DataFrame({'rain_total_mm':rain.resample('D').sum(min_count=1),'rain_max_1h_mm':rain.resample('D').max(),'rain_max_3h_mm':roll3.resample('D').max(),'rain_max_6h_mm':roll6.resample('D').max(),'rain_hours':(rain>0).resample('D').sum(min_count=1)})
     daily=out.rain_total_mm
     out['rain_prev_24h_mm']=daily.shift(1).rolling(1,min_periods=1).sum()
@@ -56,16 +58,30 @@ def build_rain_drivers(city,root=Path('.')):
 
 def build_tide_drivers(root=Path('.'),start='2002-01-01',end='2027-12-31'):
     from utide import solve,reconstruct
-    from matplotlib.dates import date2num
     p=root/'data/raw/uhslc_vung_tau/uhslc_vung_tau_hourly.csv'
     d=pd.read_csv(p,skiprows=[1]);d['time']=pd.to_datetime(d.time,utc=True,errors='coerce');d['sea_level']=pd.to_numeric(d.sea_level,errors='coerce')/1000.
-    d=d.dropna(subset=['time','sea_level']).sort_values('time').drop_duplicates('time');fit=d[d.time<pd.Timestamp('2023-01-01',tz='UTC')]
-    t=date2num(fit.time.dt.tz_localize(None).to_numpy());coef=solve(t,fit.sea_level.to_numpy(float),lat=10.35,constit='auto',method='ols',trend=False,phase='Greenwich',nodal=True,conf_int='linear',verbose=False)
-    idx=pd.date_range(start,end+' 23:00',freq='h',tz='UTC');tn=date2num(idx.tz_localize(None).to_numpy());astr=reconstruct(coef,tn,verbose=False).h
-    hourly=pd.DataFrame({'time_utc':idx,'astro_m':np.asarray(astr,float)});hourly['date']=hourly.time_utc.dt.tz_convert(LOCAL_TZ).dt.tz_localize(None).dt.normalize()
+    d=d.dropna(subset=['time','sea_level']);d=d[d.time<pd.Timestamp('2025-01-01',tz='UTC')].sort_values('time').drop_duplicates('time')
+    # Bound UTide memory and preserve an independent DEV interval: only the five
+    # calendar years immediately before 2023 identify the harmonic constants.
+    fit=d[(d.time>=pd.Timestamp('2018-01-01',tz='UTC'))&(d.time<pd.Timestamp('2023-01-01',tz='UTC'))]
+    if len(fit)>5*366*24+24:raise ValueError('UTide fit window exceeded five years')
+    coef=solve(fit.time.dt.tz_localize(None).to_numpy(dtype='datetime64[ms]'),fit.sea_level.to_numpy(np.float64),lat=10.35,constit='auto',method='ols',trend=False,phase='Greenwich',nodal=True,conf_int='none',verbose=False)
+    if len(coef.name)==0:raise ValueError('UTide selected no constituents; check timestamp/sea-level parsing')
+    chunks=[];daily_chunks=[]
+    for year in range(int(start[:4]),int(end[:4])+1):
+        lo=max(pd.Timestamp(start),pd.Timestamp(f'{year}-01-01'));hi=min(pd.Timestamp(end),pd.Timestamp(f'{year}-12-31'))
+        local_idx=pd.date_range(lo,hi+pd.Timedelta(hours=23),freq='h')
+        utc_idx=local_idx.tz_localize(LOCAL_TZ).tz_convert('UTC')
+        tide_times=utc_idx.tz_localize(None).to_numpy(dtype='datetime64[ms]')
+        astr=reconstruct(tide_times,coef,min_SNR=0,min_PE=0,verbose=False).h
+        hourly_y=pd.DataFrame({'time_utc':utc_idx,'astro_m':np.asarray(astr,dtype=np.float32)})
+        hourly_y['date']=hourly_y.time_utc.dt.tz_convert(LOCAL_TZ).dt.tz_localize(None).dt.normalize()
+        chunks.append(hourly_y)
+        daily_chunks.append(hourly_y.groupby('date').astro_m.agg(['max','min']).rename(columns={'max':'astro_daily_max_m','min':'astro_daily_min_m'}))
+    hourly=pd.concat(chunks,ignore_index=True)
     observed=d.copy();observed['date']=observed.time.dt.tz_convert(LOCAL_TZ).dt.tz_localize(None).dt.normalize()
     obs=observed.groupby('date').sea_level.max().rename('observed_daily_max_m')
-    daily=hourly.groupby('date').agg(astro_daily_max_m=('astro_m','max'),astro_daily_min_m=('astro_m','min'))
+    daily=pd.concat(daily_chunks).groupby(level=0).first().sort_index()
     daily['astro_max_3d_m']=daily.astro_daily_max_m.rolling(3,min_periods=3).max()
     daily=daily.join(obs).reset_index();daily['astro_vs_observed_residual_m']=daily.astro_daily_max_m-daily.observed_daily_max_m
     out=root/'data/processed/ho_chi_minh';out.mkdir(parents=True,exist_ok=True)
@@ -73,19 +89,33 @@ def build_tide_drivers(root=Path('.'),start='2002-01-01',end='2027-12-31'):
     return hourly,daily,coef
 
 def build_route_cell_lookup(city,root=Path('.')):
-    base=root/'data/processed'/city;cells=pd.read_parquet(base/'drivers_rain_cell_daily.parquet',columns=['cell_lat','cell_lon']).drop_duplicates().to_numpy(float)
-    routes=gpd.read_parquet(base/'routes.parquet',columns=['route_id','geometry'])
-    # Route midpoint is transformed to WGS84 by GeoParquet; nearest native ERA5 cell centre is geodesic locally.
-    geoms=routes.geometry.array;xy=np.empty((len(geoms),2),float)
-    for i,g in enumerate(geoms):
-        p=g.interpolate(.5,normalized=True) if g.geom_type in ('LineString','MultiLineString') else g.representative_point();xy[i]=[p.y,p.x]
-    dlat=xy[:,None,0]-cells[None,:,0];dlon=(xy[:,None,1]-cells[None,:,1])*np.cos(np.deg2rad(xy[:,None,0]));nearest=np.argmin(dlat*dlat+dlon*dlon,axis=1)
-    table=pd.DataFrame({'route_id':routes.route_id,'cell_lat':cells[nearest,0],'cell_lon':cells[nearest,1]})
-    table.to_parquet(base/'route_driver_cells.parquet',index=False);return table
+    import pyarrow as pa,pyarrow.parquet as pq
+    import shapely
+    base=root/'data/processed'/city;cells=pd.read_parquet(base/'drivers_rain_cell_daily.parquet',columns=['cell_lat','cell_lon']).drop_duplicates().to_numpy(np.float32)
+    source=base/'routes.parquet';dest=base/'route_driver_cells.parquet';writer=None;parts=[]
+    pf=pq.ParquetFile(source)
+    for batch in pf.iter_batches(batch_size=1500,columns=['route_id','geometry']):
+        ids=batch.column('route_id');geoms=shapely.from_wkb(batch.column('geometry').to_pylist());mid=shapely.line_interpolate_point(geoms,.5,normalized=True)
+        lat=np.asarray(shapely.get_y(mid),np.float32);lon=np.asarray(shapely.get_x(mid),np.float32)
+        dlat=lat[:,None]-cells[None,:,0];dlon=(lon[:,None]-cells[None,:,1])*np.cos(np.deg2rad(lat[:,None]));nearest=np.argmin(dlat*dlat+dlon*dlon,axis=1)
+        tab=pa.table({'route_id':ids,'cell_lat':cells[nearest,0],'cell_lon':cells[nearest,1]})
+        if writer is None:writer=pq.ParquetWriter(dest,tab.schema,compression='zstd')
+        writer.write_table(tab);parts.append(tab.num_rows)
+    if writer:writer.close()
+    return {'rows':sum(parts),'batches':len(parts)}
 
 def build_all(root=Path('.')):
     result={}
     for city in ('ho_chi_minh','da_nang'):
-        cells,days=build_rain_drivers(city,root);lookup=build_route_cell_lookup(city,root);result[city]={'rain_cell_rows':len(cells),'rain_days':len(days),'rain_cells':len(lookup.cell_lat.unique()),'routes':len(lookup)}
+        cells,days=build_rain_drivers(city,root);base=root/'data/processed'/city;lookup_path=base/'route_driver_cells.parquet'
+        import pyarrow.parquet as pq
+        n_routes=pq.ParquetFile(base/'routes.parquet').metadata.num_rows
+        if lookup_path.exists() and pq.ParquetFile(lookup_path).metadata.num_rows==n_routes:
+            lookup=pd.read_parquet(lookup_path,columns=['route_id','cell_lat','cell_lon'])
+            valid=set(map(tuple,pd.read_parquet(base/'drivers_rain_cell_daily.parquet',columns=['cell_lat','cell_lon']).drop_duplicates().to_numpy(float)))
+            if lookup.route_id.is_unique and set(map(tuple,lookup[['cell_lat','cell_lon']].drop_duplicates().to_numpy(float)))<=valid:lookup_rows=len(lookup)
+            else:lookup_rows=build_route_cell_lookup(city,root)['rows']
+        else:lookup_rows=build_route_cell_lookup(city,root)['rows']
+        result[city]={'rain_cell_rows':len(cells),'rain_days':len(days),'rain_cells':int(cells[['cell_lat','cell_lon']].drop_duplicates().shape[0]),'routes':lookup_rows,'route_lookup_reused':lookup_path.exists()}
     hourly,daily,_=build_tide_drivers(root);result['tide']={'hourly':len(hourly),'days':len(daily),'observed_days':int(daily.observed_daily_max_m.notna().sum())}
     return result
