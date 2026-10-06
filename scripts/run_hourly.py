@@ -96,6 +96,7 @@ def run(city,at=None,offline_sample=False,model_dir='models/final_2025-01-01',ra
     at=pd.Timestamp(at)
     if at.tzinfo is None:at=at.tz_localize(TZ)
     else:at=at.tz_convert(TZ)
+    at=at.floor('h')  # rain and tide series are hourly; an unaligned "now" breaks the tide lookup
     inputs=[]
     for h in range(3):
         t=at+pd.Timedelta(hours=h);sub=series.loc[(series.index>t-pd.Timedelta(hours=6))&(series.index<=t)].dropna()
