@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyarrow.dataset as ds
+import argparse
 from sklearn.metrics import roc_auc_score
 from floodrisk.combine import route_trigger
 from floodrisk.combine import read_fit_records
@@ -40,13 +41,24 @@ def _boot_auc(y,s,seed=719,draws=2000):
         b.append(roc_auc_score(y[ix],s[ix]))
     return point,tuple(map(float,np.quantile(b,[.025,.975])))
 
-def run():
-    rec=_records();matched=_matches(rec);outputs=[];lines=['# Model 2/combination DEV rehearsal','','All DEV summaries use dated unlocked records from 2023–2024; 2025+ records were predicate-filtered out before attributes were read. Intervals resample flood days. Route-day risk is computed in a per-day loop; no route × calendar-day matrix is constructed. A hit means a matched DEV flood route is selected. Unmatched reports are excluded from route hit rates and counted below.','']
+def run(pilot=False):
+    import json
+    rec=_records();matched=_matches(rec);outputs=[]
+    fitmeta=json.loads((ROOT/'models/m1_s_fit_metadata.json').read_text())
+    lines=['# Model 2/combination DEV rehearsal','','All DEV summaries use dated unlocked records from 2023–2024; 2025+ records were predicate-filtered out before attributes were read. Intervals resample flood days. Route-day risk is computed in a per-day loop; no route × calendar-day matrix is constructed. A hit means a matched DEV flood route is selected. Unmatched reports are excluded from route hit rates and counted below.',f"",f"M1 refit: {fitmeta['scorer']}; in-universe routes only; all positive and known-report routes retained; fixed-seed unlabeled subsample capped at 20,000 per city. Numeric model inputs are float32 and LightGBM used two threads.",'']
     all_city_summary=[]
     for city in ('ho_chi_minh','da_nang'):
-        s=pd.read_parquet(ROOT/'data/processed'/city/'route_susceptibility.parquet')
-        s.route_id=s.route_id.astype(str);routes=pd.read_parquet(ROOT/'data/processed'/city/'routes.parquet',columns=['route_id','highway_class']);routes.route_id=routes.route_id.astype(str)
-        s=s.merge(routes,on='route_id',how='left',suffixes=('','_route'))
+        source=ROOT/'data/processed'/city/'route_susceptibility.parquet'
+        usecols=['route_id','in_universe','S_rain','S_tide','H_rain','H_tide','H_any']
+        if pilot:
+            import pyarrow.parquet as pq
+            batches=pq.ParquetFile(source).iter_batches(batch_size=1000,columns=usecols);parts=[]
+            for b in batches:
+                parts.append(b.to_pandas())
+                if sum(map(len,parts))>=5000:break
+            s=pd.concat(parts,ignore_index=True).head(5000)
+        else:s=pd.read_parquet(source,columns=usecols)
+        s.route_id=s.route_id.astype(str)
         uni=s.in_universe.astype(bool).to_numpy();ids=s.route_id.to_numpy();idix={v:i for i,v in enumerate(ids)}
         d=rec[rec.city==city];m=matched[matched.city==city];bydate={pd.Timestamp(k):set(g.route_id.astype(str)) for k,g in m.groupby('date')}
         ad=pd.read_parquet(ROOT/'data/processed'/city/'daily_alert_index_dev.parquet');ad.date=pd.to_datetime(ad.date).dt.normalize();ad=ad.set_index('date')
@@ -64,16 +76,18 @@ def run():
         subsets={'all':np.ones(len(s),bool),'in_universe':uni}
         cityres=[]
         for scope,mask in subsets.items():
+            thscope='universe' if scope=='in_universe' else 'all'
             idx=np.flatnonzero(mask);n=len(idx);hist=H.astype(bool)&mask
             model_hits=[];hist_hits=[];hyb_hits=[];newhits={x:[] for x in ('model','history','hybrid')}
             budget_values={k:{x:[] for x in ('history','model','hybrid')} for k in ('history_count','5pct','20pct')}
             new_budget_values={k:{x:[] for x in ('history','model','hybrid')} for k in ('history_count','5pct','20pct')}
             alert={'flood':{'model':[],'history':[],'hybrid':[]},'rain_no_record':{'model':[],'history':[],'hybrid':[]},'dry_no_record':{'model':[],'history':[],'hybrid':[]}}
+            new_alert={'flood':{'model':[],'history':[],'hybrid':[]},'rain_no_record':{'model':[],'history':[],'hybrid':[]},'dry_no_record':{'model':[],'history':[],'hybrid':[]}}
             for dt,(p,ph) in day_cache.items():
                 pos=bydate.get(dt,set());pix=np.asarray([idix[x] for x in pos if x in idix and mask[idix[x]]],int)
                 is_event=dt in event_days
                 if is_event and len(pix):
-                    pmask=p>=th[scope]['model']['medium'];hymask=ph>=th[scope]['hybrid']['medium'];hmask=hist
+                    pmask=p>=th[thscope]['model']['medium'];hymask=ph>=th[thscope]['hybrid']['medium'];hmask=hist
                     model_hits.append(float(pmask[pix].mean()));hist_hits.append(float(hmask[pix].mean()));hyb_hits.append(float(hymask[pix].mean()))
                     fresh=np.asarray([j for j in pix if not hist[j]],int)
                     if len(fresh):
@@ -89,9 +103,13 @@ def run():
                 recday=dt in event_days
                 month=dt.month;season=5<=month<=11 if city=='ho_chi_minh' else 9<=month<=12
                 typ='flood' if recday else ('rain_no_record' if season else 'dry_no_record')
-                alert[typ]['model'].append(float(np.mean(p[mask]>=th[scope]['model']['medium'])) if n else np.nan)
+                alert[typ]['model'].append(float(np.mean(p[mask]>=th[thscope]['model']['medium'])) if n else np.nan)
                 alert[typ]['history'].append(float(np.mean(hist[mask])) if n else np.nan)
-                alert[typ]['hybrid'].append(float(np.mean(ph[mask]>=th[scope]['hybrid']['medium'])) if n else np.nan)
+                alert[typ]['hybrid'].append(float(np.mean(ph[mask]>=th[thscope]['hybrid']['medium'])) if n else np.nan)
+                freshmask=mask&~hist
+                new_alert[typ]['model'].append(float(np.mean(p[freshmask]>=th[thscope]['model']['medium'])) if freshmask.any() else np.nan)
+                new_alert[typ]['history'].append(0. if freshmask.any() else np.nan)
+                new_alert[typ]['hybrid'].append(float(np.mean(ph[freshmask]>=th[thscope]['hybrid']['medium'])) if freshmask.any() else np.nan)
             row={'city':city,'scope':scope,'flood_days_with_matched_routes':len(model_hits),'model_D1':ci_text(model_hits),'history_D1':ci_text(hist_hits),'hybrid_D1':ci_text(hyb_hits),'new_days':len(newhits['model']),'model_new_D1':ci_text(newhits['model']),'history_new_D1':ci_text(newhits['history']),'hybrid_new_D1':ci_text(newhits['hybrid'])}
             for budget,vs in budget_values.items():
                 for method,vals in vs.items():row[f'{budget}_{method}']=ci_text(vals)
@@ -99,6 +117,8 @@ def run():
                 for method,vals in vs.items():row[f'new_{budget}_{method}']=ci_text(vals)
             for typ,vs in alert.items():
                 for method,vals in vs.items():row[f'{typ}_{method}']=ci_text(vals)
+            for typ,vs in new_alert.items():
+                for method,vals in vs.items():row[f'new_{typ}_{method}']=ci_text(vals)
             yy=np.asarray([dt in event_days for dt in day_cache]);alert_index=np.asarray([ad.loc[dt,'model_alert_'+('universe' if scope=='in_universe' else 'all')] for dt in day_cache if dt in ad.index])
             if len(alert_index)==len(yy):
                 auc,auc_ci=_boot_auc(yy,alert_index)
@@ -117,9 +137,16 @@ def run():
         lines += ['', 'Alert burden, share of routes at medium/high (mean [95% day bootstrap CI]):', '', '| Scope / day type | History | Model P | Hybrid |', '|---|---:|---:|---:|']
         for r in cityres:
             for typ,label in [('flood','DEV record days'),('rain_no_record','rainy-season no-record days'),('dry_no_record','dry-season days')]:lines.append(f"| {r['scope']} / {label} | {r[typ+'_history']} | {r[typ+'_model']} | {r[typ+'_hybrid']} |")
+        lines += ['', 'Alert burden restricted to routes without any FIT history:', '', '| Scope / day type | History | Model P | Hybrid |', '|---|---:|---:|---:|']
+        for r in cityres:
+            for typ,label in [('flood','DEV record days'),('rain_no_record','rainy-season no-record days'),('dry_no_record','dry-season days')]:lines.append(f"| {r['scope']} / {label} | {r['new_'+typ+'_history']} | {r['new_'+typ+'_model']} | {r['new_'+typ+'_hybrid']} |")
         lines.append('')
-    Path('reports/dev_eval.md').write_text('\n'.join(lines)+'\n')
-    pd.DataFrame(outputs).to_csv('reports/dev_results.tsv',sep='\t',index=False)
-    print(f"wrote reports/dev_eval.md and reports/dev_results.tsv; {len(outputs)} city/scope rows")
+    if pilot:
+        print(f"DEV evaluation pilot completed with bounded route subset; {len(outputs)} city/scope rows; no reports written")
+    else:
+        Path('reports/dev_eval.md').write_text('\n'.join(lines)+'\n')
+        pd.DataFrame(outputs).to_csv('reports/dev_results.tsv',sep='\t',index=False)
+        print(f"wrote reports/dev_eval.md and reports/dev_results.tsv; {len(outputs)} city/scope rows")
 
-if __name__=='__main__':run()
+if __name__=='__main__':
+    parser=argparse.ArgumentParser();parser.add_argument('--pilot',action='store_true');args=parser.parse_args();run(pilot=args.pilot)

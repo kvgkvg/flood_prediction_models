@@ -1,0 +1,25 @@
+{
+  "scorer": "lgbm_phys_cityrank",
+  "fit_cutoff": "2022-12-31",
+  "max_training_date": "2022-12-31",
+  "train_cities": [
+    "ho_chi_minh",
+    "da_nang"
+  ],
+  "route_labels": "dates<2023 plus train_undated",
+  "city_balanced_rain": true,
+  "unlabeled_route_cap_per_city": 20000,
+  "fixed_seed": 50723,
+  "n_fit_routes": {
+    "ho_chi_minh": 20251,
+    "da_nang": 14023
+  },
+  "n_rain_positive_routes": {
+    "ho_chi_minh": 151,
+    "da_nang": 329
+  },
+  "n_unlabeled_sampled": {
+    "ho_chi_minh": 20000,
+    "da_nang": 13694
+  }
+}

@@ -11,11 +11,14 @@ Rain comes from Open-Meteo ERA5 at 0.25° (~28 km here), city max/mean across ca
 | City | Cause | FIT positive days (in season / all) | DEV positive days (in season / all) | Identification |
 |---|---|---:|---:|---|
 | ho_chi_minh | rain | 27 / 30 | 4 / 5 | ≥8 FIT positive days |
+| ho_chi_minh | tide | 23 / 25 | 1 / 1 | ≥8 FIT positive days |
+| da_nang | rain | 1 / 1 | 14 / 16 | weakly identified (<8 FIT positive days) |
+| da_nang | tide | 0 / 0 | 0 / 0 | weakly identified (<8 FIT positive days) |
 
 ## ho_chi_minh rain
 
 Selected T: `logit_log` by best FIT leave-one-year-out ROC AUC (AP tie-break). Fit artifact max date: 2022-11-30; FIT sample 4497 days, 30 positive days; weakly identified=False.
-FIT LOO-CV AUC 0.680 [0.580,0.771], AP 0.017 [0.011,0.037]. DEV AUC 0.665 [0.399,0.939], AP 0.224 [0.014,0.630].
+FIT LOO-CV AUC 0.679 [0.579,0.771], AP 0.017 [0.011,0.036]. DEV AUC 0.666 [0.402,0.938], AP 0.223 [0.014,0.629].
 
 DEV reliability:
 
@@ -31,11 +34,10 @@ FIT-CV candidates:
 
 | Candidate | AUC | AP |
 |---|---:|---:|
-| logit_design | 0.567 [0.447,0.684] | 0.012 [0.008,0.024] |
-| logit_log | 0.680 [0.570,0.790] | 0.017 [0.011,0.038] |
+| logit_design | 0.571 [0.450,0.687] | 0.013 [0.008,0.025] |
+| logit_log | 0.679 [0.569,0.789] | 0.017 [0.011,0.038] |
 | isotonic | 0.558 [0.428,0.698] | 0.017 [0.010,0.031] |
-| percentile | 0.651 [0.544,0.752] | 0.023 [0.011,0.070] |
-| ho_chi_minh | tide | 23 / 25 | 1 / 1 | ≥8 FIT positive days |
+| percentile | 0.651 [0.544,0.753] | 0.023 [0.011,0.070] |
 
 ## ho_chi_minh tide
 
@@ -67,22 +69,21 @@ Unlocked FIT+DEV dates, positives in any month and rainy-season negative control
 
 - Positive max-3h mm: n=35, p10/median/p90=[2.74, 10.2, 21.36]; negative n=4891, p10/median/p90=[1.0, 6.7, 14.5].
 - Share of positive days with <5 mm city max-3h: 25.7% [11.4%,40.0%] bootstrap 95% CI.
-| da_nang | rain | 1 / 1 | 14 / 16 | weakly identified (<8 FIT positive days) |
 
 ## da_nang rain
 
 Selected T: `percentile` by best FIT leave-one-year-out ROC AUC (AP tie-break). Fit artifact max date: 2022-12-31; FIT sample 2562 days, 1 positive days; weakly identified=True.
-FIT LOO-CV AUC nan [nan,nan], AP nan [nan,nan]. DEV AUC 0.603 [0.468,0.744], AP 0.154 [0.068,0.319].
+FIT LOO-CV AUC nan [nan,nan], AP nan [nan,nan]. DEV AUC 0.592 [0.453,0.738], AP 0.153 [0.067,0.319].
 
 DEV reliability:
 
 | Bin | Days | Mean T | Observed flood-day rate |
 |---:|---:|---:|---:|
 | 0 | 50 | 0.000 | 0.040 |
-| 1 | 49 | 0.000 | 0.020 |
-| 2 | 49 | 0.000 | 0.102 |
+| 1 | 49 | 0.000 | 0.041 |
+| 2 | 49 | 0.000 | 0.082 |
 | 3 | 49 | 0.004 | 0.082 |
-| 4 | 49 | 0.330 | 0.082 |
+| 4 | 49 | 0.341 | 0.082 |
 
 FIT-CV candidates:
 
@@ -92,4 +93,3 @@ FIT-CV candidates:
 | logit_log | nan [nan,nan] | nan [nan,nan] |
 | isotonic | nan [nan,nan] | nan [nan,nan] |
 | percentile | nan [nan,nan] | nan [nan,nan] |
-| da_nang | tide | 0 / 0 | 0 / 0 | weakly identified (<8 FIT positive days) |

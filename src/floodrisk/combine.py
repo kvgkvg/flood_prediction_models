@@ -15,6 +15,20 @@ def _scorer(name):
 
 def _manifest(city):return json.loads((Path('data/processed')/city/'feature_manifest.json').read_text())
 
+def _sample_training_routes(x,positives,known,city,seed=50723):
+    """Keep all positives/known reports and cap sampled unlabeled routes at 20k."""
+    u=x.in_universe.astype(bool).to_numpy();route=x.route_id.astype(str)
+    positive=route.isin(positives).to_numpy()&u;reported=route.isin(known).to_numpy()&u
+    unlabeled=np.flatnonzero(u&~reported&~positive)
+    rng=np.random.default_rng(seed+(0 if city=='ho_chi_minh' else 1))
+    chosen=rng.choice(unlabeled,size=min(20_000,len(unlabeled)),replace=False) if len(unlabeled)>20_000 else unlabeled
+    keep=np.flatnonzero((positive|reported)&u)
+    keep=np.unique(np.r_[keep,chosen])
+    out=x.iloc[keep].copy().reset_index(drop=True)
+    meta=pd.DataFrame({'label':out.route_id.astype(str).isin(positives).to_numpy(np.int8),'sample_weight':np.where(out.route_id.astype(str).isin(known),1.,.2).astype(np.float32)})
+    out=pd.concat([out,meta],axis=1)
+    return out
+
 def read_fit_records(root=Path('.')):
     rec=pd.read_parquet(root/'data/processed/flood_records.parquet',columns=['record_id','city','date','cause','split'],filters=[('split','in',['train','train_undated'])])
     rec['date']=pd.to_datetime(rec.date,errors='coerce');return rec
@@ -33,7 +47,7 @@ def fit_route_models(root=Path('.'),pilot=False,save=True):
     features={};training={};
     for city in ('ho_chi_minh','da_nang'):
         manifest_city=_manifest(city)
-        cols=['route_id','in_universe']+list(manifest_city['feature_names'])
+        cols=list(dict.fromkeys(['route_id','in_universe']+list(manifest_city['feature_names'])))
         source=root/'data/processed'/city/'route_features.parquet'
         if pilot:
             import pyarrow.parquet as pq
@@ -44,13 +58,17 @@ def fit_route_models(root=Path('.'),pilot=False,save=True):
                 if sum(map(len,parts))>=6000:break
             x=pd.concat(parts,ignore_index=True).head(6000).copy()
         else:x=pd.read_parquet(source,columns=cols)
-        x['route_id']=x.route_id.astype(str);features[city]=x
+        x['route_id']=x.route_id.astype(str)
+        for col in x.columns:
+            if col not in ('route_id','road_highway_class') and pd.api.types.is_numeric_dtype(x[col]):x[col]=x[col].astype(np.float32)
+        x=x.copy()
+        features[city]=x
         if pilot:
-            n=len(x);x['label']=(np.arange(n)%67==0).astype(np.int8);x['sample_weight']=1.;training[city]=x[x.in_universe.astype(bool)].copy();continue
+            n=len(x);meta=pd.DataFrame({'label':(np.arange(n)%67==0).astype(np.int8),'sample_weight':np.ones(n,np.float32)});x=pd.concat([x.reset_index(drop=True),meta],axis=1);training[city]=x[x.in_universe.astype(bool)].copy();continue
         fc=fit[fit.city==city];any_routes=set(fc.route_id.astype(str));
         rain_routes=set(fc.loc[fc.cause.isin(['rain','combined']),'route_id'].astype(str));tide_routes=set(fc.loc[fc.cause.isin(['tide','combined']),'route_id'].astype(str))
-        x['label']=x.route_id.isin(rain_routes).astype(np.int8);x['sample_weight']=np.where(x.route_id.isin(any_routes),1.,.2).astype(np.float32)
-        training[city]=x[x.in_universe.astype(bool)].copy();training[city].attrs['tide_routes']=tide_routes;training[city].attrs['any_routes']=any_routes
+        training[city]=_sample_training_routes(x,rain_routes,any_routes,city)
+        training[city].attrs['tide_routes']=tide_routes;training[city].attrs['any_routes']=any_routes
     rain_parts=[]
     for city,x in training.items():
         w=x.sample_weight.to_numpy(np.float64);total=max(w.sum(),1.);x=x.copy();x['sample_weight']=(w/total*.5*len(w)).astype(np.float32);rain_parts.append(x)
@@ -58,14 +76,15 @@ def fit_route_models(root=Path('.'),pilot=False,save=True):
     rain_model=scorer.fit(rain_train,manifest,'ever_flood_rain')
     tide_model=None
     if not pilot:
-        tx=training['ho_chi_minh'].copy();tide_routes=tx.attrs['tide_routes'];any_routes=tx.attrs['any_routes'];tx['label']=tx.route_id.isin(tide_routes).astype(np.int8);tx['sample_weight']=np.where(tx.route_id.isin(any_routes),1.,.2).astype(np.float32);tide_model=scorer.fit(tx,manifest,'ever_flood_tide')
+        tx=_sample_training_routes(features['ho_chi_minh'],training['ho_chi_minh'].attrs['tide_routes'],training['ho_chi_minh'].attrs['any_routes'],'ho_chi_minh',seed=81023)
+        tide_model=scorer.fit(tx,manifest,'ever_flood_tide')
     if save and not pilot:
         Path('models').mkdir(exist_ok=True)
         for kind,m in [('rain',rain_model),('tide',tide_model)]:
             if m is None:continue
             lm=m.get('model') if isinstance(m,dict) else m
             if hasattr(lm,'booster_'):lm.booster_.save_model(f'models/m1_s_{kind}.txt')
-        meta={'scorer':name,'fit_cutoff':'2022-12-31','max_training_date':'2022-12-31','train_cities':['ho_chi_minh','da_nang'],'route_labels':'dates<2023 plus train_undated','city_balanced_rain':True,'n_fit_routes':{c:int(len(x)) for c,x in training.items()}}
+        meta={'scorer':name,'fit_cutoff':'2022-12-31','max_training_date':'2022-12-31','train_cities':['ho_chi_minh','da_nang'],'route_labels':'dates<2023 plus train_undated','city_balanced_rain':True,'unlabeled_route_cap_per_city':20000,'fixed_seed':50723,'n_fit_routes':{c:int(len(x)) for c,x in training.items()},'n_rain_positive_routes':{c:int(x.label.sum()) for c,x in training.items()},'n_unlabeled_sampled':{c:int((~x.route_id.isin(x.attrs.get('any_routes',set()))).sum()) for c,x in training.items()}}
         Path('models/m1_s_fit_metadata.json').write_text(json.dumps(meta,indent=2))
     return scorer,manifest,features,training,rain_model,tide_model
 
@@ -115,8 +134,8 @@ def build_combination(root=Path('.'),pilot=False,save=True):
     fit=joined[joined.date.isna()|(joined.date<pd.Timestamp('2023-01-01'))]
     scores={};trig={};h0meta={}
     for city,ft in features.items():
-        rawr=scorer.predict(rain_model,ft,manifest);sr=percentile_score(rawr,ft.in_universe.astype(bool))
-        if city=='ho_chi_minh':rawt=scorer.predict(tide_model,ft,manifest);st=percentile_score(rawt,ft.in_universe.astype(bool))
+        rawr=scorer.predict(rain_model,ft);sr=percentile_score(rawr,ft.in_universe.astype(bool))
+        if city=='ho_chi_minh':rawt=scorer.predict(tide_model,ft);st=percentile_score(rawt,ft.in_universe.astype(bool))
         else:st=np.zeros(len(ft),np.float32)
         route=ft.route_id.astype(str).to_numpy();uni=ft.in_universe.to_numpy(bool);hr,ht,_=_train_history(joined,city)
         hrv=np.isin(route,list(hr));htv=np.isin(route,list(ht));out=ft[['route_id','in_universe']].copy()

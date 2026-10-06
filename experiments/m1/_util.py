@@ -29,12 +29,14 @@ def lightgbm_frame(df,manifest,which):
     if cats:x=pd.get_dummies(x,columns=cats,dtype=float)
     for c in x:
         if x[c].dtype=='bool':x[c]=x[c].astype('uint8')
+    numeric=x.select_dtypes(include=[np.number]).columns
+    if len(numeric):x[numeric]=x[numeric].astype(np.float32)
     return x.replace([np.inf,-np.inf],np.nan)
 
 def fit_lgbm(df,manifest,which):
     from lightgbm import LGBMClassifier
     x=lightgbm_frame(df,manifest,which);y=df.label.astype(int);w=df.sample_weight.astype(float)
-    model=LGBMClassifier(n_estimators=160,max_depth=4,num_leaves=7,learning_rate=.035,reg_lambda=8.,reg_alpha=1.5,min_child_samples=30,subsample=.85,colsample_bytree=.8,subsample_freq=1,random_state=41073,n_jobs=6,verbosity=-1,deterministic=True,force_col_wise=True)
+    model=LGBMClassifier(n_estimators=160,max_depth=4,num_leaves=7,learning_rate=.035,reg_lambda=8.,reg_alpha=1.5,min_child_samples=30,subsample=.85,colsample_bytree=.8,subsample_freq=1,random_state=41073,n_jobs=2,verbosity=-1,deterministic=True,force_col_wise=True)
     model.fit(x,y,sample_weight=w)
     return {'model':model,'columns':list(x.columns),'which':which,'feature_names':list(manifest['feature_names'])}
 

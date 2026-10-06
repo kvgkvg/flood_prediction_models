@@ -1,0 +1,27 @@
+{
+  "max_fit_date": "2022-12-31",
+  "selection": {
+    "ho_chi_minh": {
+      "h0": 0.0,
+      "fit_cv_mean_top20_hit": {
+        "0.0": 0.9695684134459644,
+        "0.25": 0.9695684134459644,
+        "0.5": 0.9695684134459644,
+        "0.75": 0.9695684134459644,
+        "1.0": 0.9695684134459644
+      },
+      "selection_uses": "FIT flood dates; leave-event-year-out history flags; base M1/T fit on FIT only"
+    },
+    "da_nang": {
+      "h0": 0.0,
+      "fit_cv_mean_top20_hit": {
+        "0.0": 0.8844984802431611,
+        "0.25": 0.8844984802431611,
+        "0.5": 0.8844984802431611,
+        "0.75": 0.8844984802431611,
+        "1.0": 0.8844984802431611
+      },
+      "selection_uses": "FIT flood dates; leave-event-year-out history flags; base M1/T fit on FIT only"
+    }
+  }
+}
