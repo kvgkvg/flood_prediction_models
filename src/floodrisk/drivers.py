@@ -15,7 +15,7 @@ def _local_index(values):
 
 def _cell_daily(hourly,lat,lon):
     d=hourly.copy();d['time']=_local_index(d.time);d=d.dropna(subset=['time']).sort_values('time').drop_duplicates('time').set_index('time')
-    d=d.loc[(d.index>='2002-01-01')&(d.index<'2025-01-01')]
+    d=d.loc[d.index>='2002-01-01']
     if d.empty:return pd.DataFrame()
     # Preserve actual missing hours as missing; do not silently impute them to zero.
     rain=pd.to_numeric(d.precipitation,errors='coerce').astype(float)
@@ -56,14 +56,13 @@ def build_rain_drivers(city,root=Path('.')):
     cell.to_parquet(out/'drivers_rain_cell_daily.parquet',index=False);cityday.to_parquet(out/'drivers_rain_daily.parquet',index=False)
     return cell,cityday
 
-def build_tide_drivers(root=Path('.'),start='2002-01-01',end='2027-12-31'):
+def build_tide_drivers(root=Path('.'),start='2002-01-01',end='2027-12-31',fit_start='2020-01-01',fit_end='2025-01-01',write=True):
     from utide import solve,reconstruct
     p=root/'data/raw/uhslc_vung_tau/uhslc_vung_tau_hourly.csv'
     d=pd.read_csv(p,skiprows=[1]);d['time']=pd.to_datetime(d.time,utc=True,errors='coerce');d['sea_level']=pd.to_numeric(d.sea_level,errors='coerce')/1000.
     d=d.dropna(subset=['time','sea_level']);d=d[d.time<pd.Timestamp('2025-01-01',tz='UTC')].sort_values('time').drop_duplicates('time')
-    # Bound UTide memory and preserve an independent DEV interval: only the five
-    # calendar years immediately before 2023 identify the harmonic constants.
-    fit=d[(d.time>=pd.Timestamp('2018-01-01',tz='UTC'))&(d.time<pd.Timestamp('2023-01-01',tz='UTC'))]
+    # Bound UTide memory to the final five complete years before the locked test.
+    fit=d[(d.time>=pd.Timestamp(fit_start,tz='UTC'))&(d.time<pd.Timestamp(fit_end,tz='UTC'))]
     if len(fit)>5*366*24+24:raise ValueError('UTide fit window exceeded five years')
     coef=solve(fit.time.dt.tz_localize(None).to_numpy(dtype='datetime64[ms]'),fit.sea_level.to_numpy(np.float64),lat=10.35,constit='auto',method='ols',trend=False,phase='Greenwich',nodal=True,conf_int='none',verbose=False)
     if len(coef.name)==0:raise ValueError('UTide selected no constituents; check timestamp/sea-level parsing')
@@ -84,8 +83,9 @@ def build_tide_drivers(root=Path('.'),start='2002-01-01',end='2027-12-31'):
     daily=pd.concat(daily_chunks).groupby(level=0).first().sort_index()
     daily['astro_max_3d_m']=daily.astro_daily_max_m.rolling(3,min_periods=3).max()
     daily=daily.join(obs).reset_index();daily['astro_vs_observed_residual_m']=daily.astro_daily_max_m-daily.observed_daily_max_m
-    out=root/'data/processed/ho_chi_minh';out.mkdir(parents=True,exist_ok=True)
-    hourly.to_parquet(out/'drivers_tide_hourly.parquet',index=False);daily.to_parquet(out/'drivers_tide_daily.parquet',index=False)
+    if write:
+        out=root/'data/processed/ho_chi_minh';out.mkdir(parents=True,exist_ok=True)
+        hourly.to_parquet(out/'drivers_tide_hourly.parquet',index=False);daily.to_parquet(out/'drivers_tide_daily.parquet',index=False)
     return hourly,daily,coef
 
 def build_route_cell_lookup(city,root=Path('.')):

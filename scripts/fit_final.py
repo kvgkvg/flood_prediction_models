@@ -8,8 +8,10 @@ import pandas as pd
 
 from floodrisk.combine import (fit_route_models,read_fit_records,join_matched_records,
     history_scores,percentile_score)
-from fit_percentile_trigger import (CITIES,FIELDS,labels as rain_labels,fit_candidates,
-    choose_states)
+from fit_percentile_trigger import (CITIES,FIELDS,SEASONS,labels as rain_labels,
+    add_y,matrices,score,daily_era5,daily_ifs,percentile)
+from sklearn.linear_model import LogisticRegression
+from floodrisk.drivers import _cell_daily
 
 def write_config():
     old=Path('models/final_config.json')
@@ -60,20 +62,95 @@ These data do not prove calibration, causal hydrologic susceptibility, operation
 '''
     Path('reports/model_card.md').write_text(text)
 
-def final_trigger(cutoff,outdir):
-    frames={c:pd.read_parquet(Path('data/processed/rain_percentiles')/f'{c}_era5.parquet').set_index('date') for c in CITIES}
-    lab=rain_labels();data,cols,model,cv=fit_candidates(frames,lab,cutoff);states=choose_states(data,model,cols)
-    fitcfg={'selected_features':cols,'C':.1,'class_weight':'balanced','random_state':713,'coef':model.coef_[0].tolist(),'intercept':float(model.intercept_[0]),'n_fit_rows':len(data),'n_fit_positive_days':int(data.positive.sum()),'fit_cutoff':cutoff,'max_fit_date':str(pd.Timestamp(cutoff)-pd.Timedelta(days=1)),'pooled_cities':list(CITIES),'fit_source':'ERA5 percentiles','cv':cv,'states':states}
+def daily_era5_future(city):
+    """Aggregate cached ERA5 2025+ hours; include four 2024 tail days for antecedents."""
+    root=Path('data/raw/open_meteo')/city
+    paths=sorted(root.glob('*_2025.parquet'))+sorted(root.glob('*_2026.parquet'))
+    tail=sorted(root.glob('*_2024.parquet'))
+    parts=[]
+    for p in tail+paths:
+        d=pd.read_parquet(p,columns=['time','precipitation','latitude_returned','longitude_returned'])
+        d['time']=pd.to_datetime(d.time)
+        if '2024' in p.name:d=d[d.time>=pd.Timestamp('2024-12-28')]
+        parts.append(d)
+    if not parts:raise FileNotFoundError(f'No cached ERA5 locked-period files for {city}')
+    raw=pd.concat(parts,ignore_index=True).drop_duplicates(['time','latitude_returned','longitude_returned']).sort_values('time')
+    rows=[]
+    for (lat,lon),g in raw.groupby(['latitude_returned','longitude_returned'],sort=False):
+        x=_cell_daily(g[['time','precipitation']],float(lat),float(lon))
+        x=x[(x.date>=pd.Timestamp('2025-01-01'))&(x.date<pd.Timestamp('2027-01-01'))]
+        rows.append(x[['date']+FIELDS])
+    if not rows:raise ValueError(f'No ERA5 daily values for {city}')
+    return pd.concat(rows,ignore_index=True).groupby('date')[FIELDS].max().sort_index()
+
+def _apply_cdf(values,reference):
+    out=values.copy()
+    for f in FIELDS:
+        ref=np.sort(reference[f].dropna().to_numpy(float));v=out[f].to_numpy(float)
+        out['q_'+f]=np.searchsorted(ref,v,side='right')/max(1,len(ref))
+        out.loc[~np.isfinite(v),'q_'+f]=np.nan
+    return out
+
+def _score_available(model,cols,frame):
+    result=np.full(len(frame),np.nan,np.float32)
+    x=matrices(frame,cols);ok=np.isfinite(x).all(axis=1)
+    if ok.any():result[ok]=model.predict_proba(x[ok])[:,1].astype(np.float32)
+    return result
+
+def final_trigger(cutoff,outdir,config):
+    # Build source-specific CDFs strictly from dates before the requested cutoff.
+    cutoff_ts=pd.Timestamp(cutoff);root=Path('data/processed/rain_percentiles_locked');root.mkdir(parents=True,exist_ok=True)
+    daily={};refs={};cdf_meta={}
+    for city in CITIES:
+        eraw=daily_era5(city);eraw=eraw.loc[eraw.index<cutoff_ts]
+        iraw_all=daily_ifs(city,years=range(2017,2027))
+        iraw=iraw_all.loc[iraw_all.index<cutoff_ts]
+        iraw=iraw.loc[iraw.index<cutoff_ts]
+        if eraw.empty or iraw.empty:raise ValueError(f'CDF reference empty for {city}')
+        refs[(city,'era5')]=eraw;refs[(city,'ifs')]=iraw
+        daily[(city,'era5')]=_apply_cdf(eraw,eraw)
+        daily[(city,'ifs')]=_apply_cdf(iraw,iraw)
+        if cutoff_ts>=pd.Timestamp('2025-01-01'):
+            era_future=daily_era5_future(city);ifs_future=iraw_all.loc[iraw_all.index>=cutoff_ts]
+            daily[(city,'era5')]=pd.concat([daily[(city,'era5')],_apply_cdf(era_future,eraw)]).sort_index()
+            daily[(city,'ifs')]=pd.concat([daily[(city,'ifs')],_apply_cdf(ifs_future,iraw)]).sort_index()
+        cdir=outdir/'cdfs';cdir.mkdir(parents=True,exist_ok=True)
+        for source in ('era5','ifs'):
+            ref=refs[(city,source)]
+            ref.rename_axis('date').reset_index().to_parquet(cdir/f'{city}_{source}_reference.parquet',index=False)
+            frame=daily[(city,source)].rename_axis('date').reset_index()
+            (root/f'{city}_{source}.parquet').parent.mkdir(parents=True,exist_ok=True)
+            frame.to_parquet(root/f'{city}_{source}.parquet',index=False)
+            cdf_meta[f'{city}_{source}']={'n_reference_days':int(len(ref)),'reference_start':str(ref.index.min().date()),'reference_end':str(ref.index.max().date()),'test_appended_days':int((frame.date>=cutoff_ts).sum())}
+    lab=rain_labels();frames={c:daily[(c,'era5')].loc[lambda z:z.index<cutoff_ts].dropna(subset=['q_'+FIELDS[0]]) for c in CITIES};pooled=[]
+    for city,frame in frames.items():
+        z=add_y(frame,lab,city);z=z.loc[(z.index<cutoff_ts)&z.index.month.isin(SEASONS[city])].dropna(subset=['q_'+f for f in FIELDS]);z['city']=city;pooled.append(z)
+    data=pd.concat(pooled,ignore_index=False).sort_index();cols=config['rain_trigger']['features'];model=LogisticRegression(C=.1,solver='liblinear',class_weight='balanced',random_state=713,max_iter=300)
+    w=np.where(data.city.eq('ho_chi_minh'),.5/data.city.eq('ho_chi_minh').sum(),.5/data.city.eq('da_nang').sum()).astype(float)
+    model.fit(matrices(data,cols),data.positive.to_numpy(int),sample_weight=w)
+    frozen_states={'q_watch':config['q_watch'],'q_alert':config['q_alert'],'source':'final_config.json frozen Task 7 knee'}
+    fitcfg={'selected_features':cols,'C':config['rain_trigger']['C'],'class_weight':config['rain_trigger']['class_weight'],'random_state':config['rain_trigger']['random_state'],'coef':model.coef_[0].tolist(),'intercept':float(model.intercept_[0]),'n_fit_rows':len(data),'n_fit_positive_days':int(data.positive.sum()),'n_positive_days_by_city':{c:int(data.loc[data.city==c,'positive'].sum()) for c in CITIES},'fit_cutoff':cutoff,'max_fit_date_actual':str(data.index.max().date()),'fit_label_split':'train, train_undated and DEV train rows only; all dates < cutoff','pooled_cities':list(CITIES),'fit_source':'ERA5 percentiles using source-specific CDFs built strictly before cutoff','cdf_metadata':cdf_meta,'frozen_states':frozen_states}
+    for city in CITIES:
+        for source in ('era5','ifs'):
+            frame=daily[(city,source)].copy();frame['T_rain']=_score_available(model,cols,frame);q=frame['q_'+FIELDS[0]].to_numpy(float);frame['T_rain_label_free']=1/(1+np.exp(-np.clip((q-.95)/.02,-40,40)));frame.loc[~np.isfinite(q),'T_rain_label_free']=np.nan
+            frame.rename_axis('date').reset_index().to_parquet(root/f'{city}_{source}.parquet',index=False)
     (outdir/'rain_trigger.json').write_text(json.dumps(fitcfg,indent=2))
+    return fitcfg
 
 def fit(cutoff,pilot=False,verify=False):
     parsed=pd.Timestamp(cutoff)
     if parsed != parsed.normalize() or len(cutoff)!=10:raise ValueError('--cutoff must be an ISO date')
     config=write_config();write_model_card();outdir=Path('models')/f'final_{cutoff}'
     if pilot:
+        if pd.Timestamp(cutoff)>=pd.Timestamp('2025-01-01'):
+            for c in CITIES:
+                i=daily_ifs(c,years=[2025]);e=daily_era5_future(c)
+                if i.empty or e.empty:raise ValueError(f'locked rain pilot empty for {c}')
+                print(f'locked rain pilot {c}: IFS {len(i)} days, ERA5 {len(e)} days',flush=True)
         result=fit_route_models(pilot=True,save=False,cutoff=cutoff)
         print(json.dumps({'pilot':True,'cutoff':cutoff,'best_scorer':result[0].__name__ if hasattr(result[0],'__name__') else config['model1']['scorer'],'rows':{c:len(x) for c,x in result[2].items()}},default=str));return
     outdir.mkdir(parents=True,exist_ok=True)
+    rain_fit=final_trigger(cutoff,outdir,config)
     scorer,manifest,features,training,rain_model,tide_model=fit_route_models(pilot=False,save=False,cutoff=cutoff)
     rec=read_fit_records();rec=rec[rec.date.isna()|(rec.date<pd.Timestamp(cutoff))].copy();joined=join_matched_records(rec)
     for city,ft in features.items():
@@ -86,9 +163,9 @@ def fit(cutoff,pilot=False,verify=False):
         citydir=outdir/city;citydir.mkdir(parents=True,exist_ok=True);out.to_parquet(citydir/'route_susceptibility.parquet',index=False)
     for name,bundle in [('rain',rain_model),('tide',tide_model)]:
         if bundle is not None:bundle['model'].booster_.save_model(str(outdir/f'm1_s_{name}.txt'))
-    final_trigger(cutoff,outdir)
     (outdir/'final_config.json').write_text(json.dumps(config,indent=2))
-    metadata={'cutoff':cutoff,'max_training_date':str(pd.Timestamp(cutoff)-pd.Timedelta(days=1)),'route_fit_split':'train and train_undated; date < cutoff','test_locked_read':False,'scorer':config['model1']['scorer'],'rain_unlabeled_cap_per_city':20000}
+    dated=rec.dropna(subset=['date']);max_date=str(pd.to_datetime(dated.date).max().date()) if len(dated) else None
+    metadata={'cutoff':cutoff,'max_training_date_actual':max_date,'max_possible_training_date':str(pd.Timestamp(cutoff)-pd.Timedelta(days=1)),'route_fit_split':'train and train_undated; date < cutoff','locked_labels_read':False,'locked_weather_read_only_for_inference':True,'scorer':config['model1']['scorer'],'rain_unlabeled_cap_per_city':20000,'record_counts':{'eligible_records':int(len(rec)),'dated_records':int(len(dated)),'distinct_dates':int(dated.date.dt.normalize().nunique()) if len(dated) else 0,'by_city':{c:int((rec.city==c).sum()) for c in CITIES},'by_cause':{cause:int(rec.cause.isin(cs).sum()) for cause,cs in [('rain',{'rain','combined'}),('tide',{'tide','combined'})]}},'model1_training_rows':{c:int(len(training[c])) for c in CITIES},'model1_positive_routes':{c:int(training[c].label.sum()) for c in CITIES},'trigger_fit_rows':rain_fit['n_fit_rows'],'trigger_positive_days':rain_fit['n_fit_positive_days'],'trigger_max_fit_date':rain_fit['max_fit_date_actual'],'cdf_max_reference_date':max(v['reference_end'] for v in rain_fit['cdf_metadata'].values())}
     (outdir/'fit_metadata.json').write_text(json.dumps(metadata,indent=2))
     for city in CITIES:
         if cutoff=='2023-01-01':

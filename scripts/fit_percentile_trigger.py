@@ -13,15 +13,19 @@ OUT=Path('data/processed/rain_percentiles')
 FIELDS=['rain_max_3h_mm','rain_total_mm','rain_prev_72h_mm']
 SEASONS={'ho_chi_minh':set(range(5,12)),'da_nang':{9,10,11,12}}
 
-def daily_ifs(city, pilot=False):
+def daily_ifs(city, pilot=False, years=None):
     root=Path('data/raw/rain_source_experiments/ecmwf_ifs')/city
-    years=[2019] if pilot else list(range(2017,2025))
-    parts=[]
+    years=([2019] if pilot else list(range(2017,2025))) if years is None else list(years)
+    chunks=[]
     for year in years:
         d=pd.read_parquet(root/f'{year}.parquet',columns=['time','precipitation','latitude_returned','longitude_returned'])
-        for (lat,lon),g in d.groupby(['latitude_returned','longitude_returned'],sort=False):
-            x=_cell_daily(g[['time','precipitation']],lat,lon)
-            parts.append(x[['date','rain_max_3h_mm','rain_total_mm','rain_prev_72h_mm']])
+        chunks.append(d)
+    raw=pd.concat(chunks,ignore_index=True).sort_values('time')
+    parts=[]
+    # Aggregate continuous cell time series so antecedent windows cross Jan 1 correctly.
+    for (lat,lon),g in raw.groupby(['latitude_returned','longitude_returned'],sort=False):
+        x=_cell_daily(g[['time','precipitation']],lat,lon)
+        parts.append(x[['date','rain_max_3h_mm','rain_total_mm','rain_prev_72h_mm']])
     x=pd.concat(parts,ignore_index=True)
     return x.groupby('date')[FIELDS].max().sort_index()
 

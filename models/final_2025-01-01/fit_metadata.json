@@ -1,0 +1,35 @@
+{
+  "cutoff": "2025-01-01",
+  "max_training_date_actual": "2024-12-30",
+  "max_possible_training_date": "2024-12-31 00:00:00",
+  "route_fit_split": "train and train_undated; date < cutoff",
+  "scorer": "lgbm_phys_cityrank",
+  "rain_unlabeled_cap_per_city": 20000,
+  "record_counts": {
+    "eligible_records": 893,
+    "dated_records": 847,
+    "distinct_dates": 73,
+    "by_city": {
+      "ho_chi_minh": 375,
+      "da_nang": 518
+    },
+    "by_cause": {
+      "rain": 744,
+      "tide": 195
+    }
+  },
+  "model1_training_rows": {
+    "ho_chi_minh": 20285,
+    "da_nang": 14023
+  },
+  "model1_positive_routes": {
+    "ho_chi_minh": 178,
+    "da_nang": 395
+  },
+  "trigger_fit_rows": 7728,
+  "trigger_positive_days": 46,
+  "trigger_max_fit_date": "2024-12-31",
+  "locked_labels_read": false,
+  "locked_weather_read_only_for_inference": true,
+  "cdf_max_reference_date": "2024-12-31"
+}

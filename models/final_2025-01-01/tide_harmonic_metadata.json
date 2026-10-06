@@ -1,0 +1,10 @@
+{
+  "fit_start": "2020-01-01",
+  "fit_end_exclusive": "2025-01-01",
+  "max_fit_observation_date": "2024-12-31",
+  "fit_observations": 40350,
+  "predicted_start": "2002-01-01",
+  "predicted_end": "2026-12-31",
+  "locked_labels_read": false,
+  "trigger_form": "unchanged saved percentile trigger from models/m2_ho_chi_minh_tide.json"
+}
