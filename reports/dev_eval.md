@@ -1,112 +1,114 @@
-# Model 2/combination DEV rehearsal
+# Combination v2 DEV evaluation
 
-All DEV summaries use dated unlocked records from 2023–2024; 2025+ records were predicate-filtered out before attributes were read. Intervals resample flood days. Route-day risk is computed in a per-day loop; no route × calendar-day matrix is constructed. A hit means a matched DEV flood route is selected. Unmatched reports are excluded from route hit rates and counted below.
+A1 diagnosis of v1 HCMC D1: FIT medium cutoffs differed by population (all routes 0.0449; in-universe 0.4033). The 44 matched in-universe DEV flood routes had max P=0.0709; none passed 0.4033, while 11 passed the lower all-route cutoff. The OOU group did not have higher P (1 matched DEV route, P=0; OOU route-day P p95=0). Driver shift compounded this: HCMC DEV positive-day max T_rain max=0.068 vs FIT positive max=0.153, and T_tide max=0.061 vs 0.911. V2 removes population-specific P quantile levels.
 
-M1 refit: lgbm_phys_cityrank; in-universe routes only; all positive and known-report routes retained; fixed-seed unlabeled subsample capped at 20,000 per city. Numeric model inputs are float32 and LightGBM used two threads.
+Levels use per-cause FIT-only T states and route bands: A top 5%, B next 15%, C rest; high=alert+A, medium=alert+B or watch+A. Model-only uses S_model; hybrid uses S_hyb=max(S_model,S_hist); history-only flags FIT routes. P_model/P_hybrid remain continuous routing-cost scores. This is a documented change from the prior flood-day-P quantile rule because that rule produced a population-dependent zero-alert failure.
+
+Rainy-season no-report days are season days without a record of the cause. Unreported days are not confirmed dry. All DEV labels are 2023–2024; locked records were filtered out before attributes were read. Intervals bootstrap days.
 
 ## ho_chi_minh
 
-DEV records: 46 on 6 distinct dates; flood days with any dated record: 6; records unmatched to routes: 0.
+DEV records=46; distinct report dates=6; matched event days=6; unmatched records=0.
 
-| Scope | days | D1 P | D1 history | D1 hybrid | NEW P | NEW history | NEW hybrid | D4 AUC |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| all | 6 | 0.267 [0.000, 0.600] | 0.283 [0.092, 0.583] | 0.267 [0.000, 0.600] | 0.320 [0.000, 0.720] | 0.000 [0.000, 0.000] | 0.320 [0.000, 0.720] | 0.570 [0.420, 0.727] |
-| in_universe | 6 | 0.000 [0.000, 0.000] | 0.288 [0.096, 0.583] | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] | 0.458 [0.448, 0.468] |
+| Scope | D1 Model | D1 History | D1 Hybrid | D1 NEW Model | D1 NEW History | D1 NEW Hybrid |
+|---|---:|---:|---:|---:|---:|---:|
+| all | 0.422 [0.133, 0.722] | 0.283 [0.092, 0.583] | 0.422 [0.133, 0.722] | 0.493 [0.156, 0.831] | 0.000 [0.000, 0.000] | 0.493 [0.156, 0.831] |
+| in_universe | 0.339 [0.067, 0.617] | 0.288 [0.096, 0.583] | 0.339 [0.067, 0.617] | 0.391 [0.080, 0.702] | 0.000 [0.000, 0.000] | 0.391 [0.080, 0.702] |
 
-Equal route budget hit rate (mean [95% flood-day bootstrap CI]):
+D2 equal route-budget hit rate (K=history-list size / 5% / 20%); each cell is the ordered three-budget vector with day-bootstrap 95% CI. NEW restricts denominators to DEV routes without FIT history.
 
-| Scope / budget | History | Model P | Hybrid |
-|---|---:|---:|---:|
-| all / K=history count | 0.283 [0.092, 0.583] | 0.087 [0.032, 0.141] | 0.087 [0.032, 0.141] |
-| all / K=5% | 0.283 [0.092, 0.583] | 0.599 [0.413, 0.792] | 0.599 [0.413, 0.792] |
-| all / K=20% | 0.357 [0.142, 0.628] | 0.904 [0.844, 0.965] | 0.904 [0.844, 0.965] |
-| in_universe / K=history count | 0.288 [0.096, 0.583] | 0.089 [0.035, 0.143] | 0.089 [0.035, 0.143] |
-| in_universe / K=5% | 0.288 [0.096, 0.583] | 0.482 [0.319, 0.706] | 0.482 [0.319, 0.706] |
-| in_universe / K=20% | 0.343 [0.131, 0.621] | 0.714 [0.575, 0.854] | 0.714 [0.575, 0.854] |
+| Scope | Method | Overall | NEW |
+|---|---|---:|---:|
+| all | history | 0.283 [0.092, 0.583] / 0.283 [0.092, 0.583] / 0.283 [0.092, 0.583] | 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] |
+| all | model | 0.087 [0.032, 0.141] / 0.599 [0.413, 0.792] / 0.904 [0.844, 0.965] | 0.062 [0.000, 0.142] / 0.450 [0.280, 0.619] / 0.865 [0.803, 0.938] |
+| all | hybrid | 0.119 [0.049, 0.187] / 0.599 [0.413, 0.792] / 0.904 [0.844, 0.965] | 0.062 [0.000, 0.142] / 0.450 [0.280, 0.619] / 0.865 [0.803, 0.938] |
+| in_universe | history | 0.288 [0.096, 0.583] / 0.288 [0.096, 0.583] / 0.288 [0.096, 0.583] | 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] |
+| in_universe | model | 0.089 [0.035, 0.143] / 0.482 [0.319, 0.706] / 0.714 [0.575, 0.854] | 0.062 [0.000, 0.142] / 0.292 [0.207, 0.371] / 0.605 [0.474, 0.737] |
+| in_universe | hybrid | 0.124 [0.049, 0.197] / 0.482 [0.319, 0.706] / 0.714 [0.575, 0.854] | 0.062 [0.000, 0.142] / 0.292 [0.207, 0.371] / 0.605 [0.474, 0.737] |
 
-Same equal-budget hits restricted to DEV-positive routes with no FIT route history (history-only is zero by definition):
+D2 paired hybrid dominance check: hybrid S is pointwise >= both component scores by construction. The table reports paired hit-rate difference hybrid minus each comparator at K=history size/5%/20%; positive is better, and its 95% day-bootstrap CI shows whether the empirical top-K property holds.
 
-| Scope / budget | History | Model P | Hybrid |
-|---|---:|---:|---:|
-| all / K=history count | 0.000 [0.000, 0.000] | 0.062 [0.000, 0.142] | 0.062 [0.000, 0.142] |
-| all / K=5% | 0.000 [0.000, 0.000] | 0.450 [0.280, 0.619] | 0.450 [0.280, 0.619] |
-| all / K=20% | 0.000 [0.000, 0.000] | 0.865 [0.803, 0.938] | 0.865 [0.803, 0.938] |
-| in_universe / K=history count | 0.000 [0.000, 0.000] | 0.062 [0.000, 0.142] | 0.062 [0.000, 0.142] |
-| in_universe / K=5% | 0.000 [0.000, 0.000] | 0.292 [0.207, 0.371] | 0.292 [0.207, 0.371] |
-| in_universe / K=20% | 0.000 [0.000, 0.000] | 0.605 [0.474, 0.737] | 0.605 [0.474, 0.737] |
+| Scope | Comparator | Delta Khist / 5% / 20% |
+|---|---|---:|
+| all | history | -0.164 [-0.517, 0.069] / 0.316 [0.146, 0.470] / 0.621 [0.356, 0.803] |
+| all | model | 0.032 [0.000, 0.069] / 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] |
+| in_universe | history | -0.164 [-0.517, 0.069] / 0.194 [0.094, 0.296] / 0.426 [0.229, 0.581] |
+| in_universe | model | 0.035 [0.000, 0.076] / 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] |
 
-Alert burden, share of routes at medium/high (mean [95% day bootstrap CI]):
+D3 alert burden: share of routes at medium/high on DEV record days / rainy-season no-report days / dry-season days. Values include point estimates and 95% day-bootstrap intervals; NEW restricts routes to no FIT history.
 
-| Scope / day type | History | Model P | Hybrid |
-|---|---:|---:|---:|
-| all / DEV record days | 0.002 [0.002, 0.002] | 0.054 [0.000, 0.109] | 0.054 [0.000, 0.109] |
-| all / rainy-season no-record days | 0.002 [0.002, 0.002] | 0.050 [0.039, 0.063] | 0.050 [0.039, 0.063] |
-| all / dry-season days | 0.002 [0.002, 0.002] | 0.065 [0.049, 0.082] | 0.065 [0.049, 0.082] |
-| in_universe / DEV record days | 0.004 [0.004, 0.004] | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] |
-| in_universe / rainy-season no-record days | 0.004 [0.004, 0.004] | 0.030 [0.020, 0.041] | 0.030 [0.020, 0.041] |
-| in_universe / dry-season days | 0.004 [0.004, 0.004] | 0.031 [0.020, 0.044] | 0.031 [0.020, 0.044] |
+| Scope | Method | Overall | NEW |
+|---|---|---:|---:|
+| all | history | 0.002 [0.002, 0.002] / 0.002 [0.002, 0.002] / 0.002 [0.002, 0.002] | 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] |
+| all | model | 0.133 [0.067, 0.200] / 0.059 [0.051, 0.067] / 0.029 [0.022, 0.037] | 0.132 [0.066, 0.199] / 0.058 [0.051, 0.066] / 0.029 [0.022, 0.037] |
+| all | hybrid | 0.133 [0.067, 0.200] / 0.059 [0.051, 0.067] / 0.029 [0.022, 0.037] | 0.132 [0.066, 0.199] / 0.058 [0.051, 0.066] / 0.029 [0.022, 0.037] |
+| in_universe | history | 0.004 [0.004, 0.004] / 0.004 [0.004, 0.004] / 0.004 [0.004, 0.004] | 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] |
+| in_universe | model | 0.133 [0.067, 0.200] / 0.059 [0.052, 0.067] / 0.030 [0.022, 0.037] | 0.132 [0.066, 0.198] / 0.058 [0.051, 0.066] / 0.029 [0.022, 0.037] |
+| in_universe | hybrid | 0.133 [0.067, 0.200] / 0.059 [0.052, 0.067] / 0.030 [0.022, 0.037] | 0.132 [0.066, 0.197] / 0.058 [0.051, 0.066] / 0.029 [0.022, 0.037] |
 
-Alert burden restricted to routes without any FIT history:
+D4 all city alert-index AUC: model 0.705 [0.499, 0.906]; history 0.500 [0.500, 0.500]; hybrid 0.705 [0.499, 0.906].
+D4 all NEW-route alert-index AUC: model 0.691 [0.493, 0.888]; history 0.500 [0.500, 0.500]; hybrid 0.691 [0.493, 0.888].
 
-| Scope / day type | History | Model P | Hybrid |
-|---|---:|---:|---:|
-| all / DEV record days | 0.000 [0.000, 0.000] | 0.054 [0.000, 0.108] | 0.054 [0.000, 0.108] |
-| all / rainy-season no-record days | 0.000 [0.000, 0.000] | 0.050 [0.038, 0.062] | 0.050 [0.038, 0.062] |
-| all / dry-season days | 0.000 [0.000, 0.000] | 0.065 [0.049, 0.082] | 0.065 [0.049, 0.082] |
-| in_universe / DEV record days | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] |
-| in_universe / rainy-season no-record days | 0.000 [0.000, 0.000] | 0.030 [0.019, 0.040] | 0.030 [0.019, 0.040] |
-| in_universe / dry-season days | 0.000 [0.000, 0.000] | 0.031 [0.020, 0.043] | 0.031 [0.020, 0.043] |
+D4 in_universe city alert-index AUC: model 0.705 [0.499, 0.906]; history 0.500 [0.500, 0.500]; hybrid 0.705 [0.499, 0.906].
+D4 in_universe NEW-route alert-index AUC: model 0.691 [0.493, 0.888]; history 0.500 [0.500, 0.500]; hybrid 0.691 [0.493, 0.888].
+
+D6: share of matched DEV flood-day records with route in top 5% / 20% by S_hyb, independent of T (all / NEW):
+
+| Scope | All records, top5 / top20 | NEW records, top5 / top20 |
+|---|---:|---:|
+| all | 0.556 [0.381, 0.763] / 0.802 [0.628, 0.949] | 0.392 [0.269, 0.507] / 0.732 [0.537, 0.916] |
+| in_universe | 0.502 [0.336, 0.713] / 0.682 [0.532, 0.833] | 0.326 [0.213, 0.438] / 0.557 [0.408, 0.705] |
 
 ## da_nang
 
-DEV records: 126 on 16 distinct dates; flood days with any dated record: 16; records unmatched to routes: 0.
+DEV records=126; distinct report dates=16; matched event days=16; unmatched records=0.
 
-| Scope | days | D1 P | D1 history | D1 hybrid | NEW P | NEW history | NEW hybrid | D4 AUC |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| all | 16 | 0.016 [0.000, 0.047] | 0.095 [0.000, 0.222] | 0.016 [0.000, 0.047] | 0.017 [0.000, 0.050] | 0.000 [0.000, 0.000] | 0.017 [0.000, 0.050] | 0.523 [0.488, 0.589] |
-| in_universe | 16 | 0.021 [0.000, 0.062] | 0.097 [0.000, 0.222] | 0.021 [0.000, 0.062] | 0.022 [0.000, 0.067] | 0.000 [0.000, 0.000] | 0.022 [0.000, 0.067] | 0.527 [0.492, 0.591] |
+| Scope | D1 Model | D1 History | D1 Hybrid | D1 NEW Model | D1 NEW History | D1 NEW Hybrid |
+|---|---:|---:|---:|---:|---:|---:|
+| all | 0.016 [0.000, 0.047] | 0.095 [0.000, 0.222] | 0.016 [0.000, 0.047] | 0.017 [0.000, 0.050] | 0.000 [0.000, 0.000] | 0.017 [0.000, 0.050] |
+| in_universe | 0.021 [0.000, 0.062] | 0.097 [0.000, 0.222] | 0.021 [0.000, 0.062] | 0.022 [0.000, 0.067] | 0.000 [0.000, 0.000] | 0.022 [0.000, 0.067] |
 
-Equal route budget hit rate (mean [95% flood-day bootstrap CI]):
+D2 equal route-budget hit rate (K=history-list size / 5% / 20%); each cell is the ordered three-budget vector with day-bootstrap 95% CI. NEW restricts denominators to DEV routes without FIT history.
 
-| Scope / budget | History | Model P | Hybrid |
-|---|---:|---:|---:|
-| all / K=history count | 0.095 [0.000, 0.222] | 0.072 [0.000, 0.172] | 0.072 [0.000, 0.172] |
-| all / K=5% | 0.095 [0.000, 0.222] | 0.170 [0.034, 0.340] | 0.170 [0.034, 0.340] |
-| all / K=20% | 0.095 [0.000, 0.222] | 0.422 [0.204, 0.641] | 0.422 [0.204, 0.641] |
-| in_universe / K=history count | 0.097 [0.000, 0.222] | 0.073 [0.000, 0.176] | 0.073 [0.000, 0.176] |
-| in_universe / K=5% | 0.097 [0.000, 0.222] | 0.162 [0.030, 0.330] | 0.162 [0.030, 0.330] |
-| in_universe / K=20% | 0.097 [0.000, 0.222] | 0.415 [0.208, 0.631] | 0.415 [0.208, 0.631] |
+| Scope | Method | Overall | NEW |
+|---|---|---:|---:|
+| all | history | 0.095 [0.000, 0.222] / 0.095 [0.000, 0.222] / 0.095 [0.000, 0.222] | 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] |
+| all | model | 0.135 [0.019, 0.288] / 0.352 [0.172, 0.556] / 0.724 [0.537, 0.881] | 0.125 [0.000, 0.289] / 0.356 [0.161, 0.564] / 0.701 [0.517, 0.869] |
+| all | hybrid | 0.135 [0.019, 0.288] / 0.352 [0.172, 0.556] / 0.724 [0.537, 0.881] | 0.125 [0.000, 0.289] / 0.356 [0.161, 0.564] / 0.701 [0.517, 0.869] |
+| in_universe | history | 0.097 [0.000, 0.222] / 0.097 [0.000, 0.222] / 0.097 [0.000, 0.222] | 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] |
+| in_universe | model | 0.247 [0.090, 0.427] / 0.415 [0.219, 0.625] / 0.716 [0.531, 0.873] | 0.243 [0.076, 0.435] / 0.354 [0.156, 0.566] / 0.692 [0.511, 0.865] |
+| in_universe | hybrid | 0.247 [0.090, 0.427] / 0.415 [0.219, 0.625] / 0.716 [0.531, 0.873] | 0.243 [0.076, 0.435] / 0.354 [0.156, 0.566] / 0.692 [0.511, 0.865] |
 
-Same equal-budget hits restricted to DEV-positive routes with no FIT route history (history-only is zero by definition):
+D2 paired hybrid dominance check: hybrid S is pointwise >= both component scores by construction. The table reports paired hit-rate difference hybrid minus each comparator at K=history size/5%/20%; positive is better, and its 95% day-bootstrap CI shows whether the empirical top-K property holds.
 
-| Scope / budget | History | Model P | Hybrid |
-|---|---:|---:|---:|
-| all / K=history count | 0.000 [0.000, 0.000] | 0.058 [0.000, 0.161] | 0.058 [0.000, 0.161] |
-| all / K=5% | 0.000 [0.000, 0.000] | 0.162 [0.025, 0.339] | 0.162 [0.025, 0.339] |
-| all / K=20% | 0.000 [0.000, 0.000] | 0.445 [0.211, 0.678] | 0.445 [0.211, 0.678] |
-| in_universe / K=history count | 0.000 [0.000, 0.000] | 0.058 [0.000, 0.161] | 0.058 [0.000, 0.161] |
-| in_universe / K=5% | 0.000 [0.000, 0.000] | 0.151 [0.023, 0.323] | 0.151 [0.023, 0.323] |
-| in_universe / K=20% | 0.000 [0.000, 0.000] | 0.437 [0.200, 0.667] | 0.437 [0.200, 0.667] |
+| Scope | Comparator | Delta Khist / 5% / 20% |
+|---|---|---:|
+| all | history | 0.040 [-0.142, 0.232] / 0.258 [0.008, 0.497] / 0.629 [0.435, 0.810] |
+| all | model | 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] |
+| in_universe | history | 0.150 [-0.071, 0.373] / 0.318 [0.133, 0.518] / 0.619 [0.430, 0.799] |
+| in_universe | model | 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] |
 
-Alert burden, share of routes at medium/high (mean [95% day bootstrap CI]):
+D3 alert burden: share of routes at medium/high on DEV record days / rainy-season no-report days / dry-season days. Values include point estimates and 95% day-bootstrap intervals; NEW restricts routes to no FIT history.
 
-| Scope / day type | History | Model P | Hybrid |
-|---|---:|---:|---:|
-| all / DEV record days | 0.016 [0.016, 0.016] | 0.012 [0.000, 0.036] | 0.012 [0.000, 0.036] |
-| all / rainy-season no-record days | 0.016 [0.016, 0.016] | 0.004 [0.001, 0.007] | 0.004 [0.001, 0.007] |
-| all / dry-season days | 0.016 [0.016, 0.016] | 0.001 [0.000, 0.002] | 0.001 [0.000, 0.002] |
-| in_universe / DEV record days | 0.023 [0.023, 0.023] | 0.012 [0.000, 0.035] | 0.012 [0.000, 0.035] |
-| in_universe / rainy-season no-record days | 0.023 [0.023, 0.023] | 0.003 [0.000, 0.005] | 0.003 [0.000, 0.005] |
-| in_universe / dry-season days | 0.023 [0.023, 0.023] | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] |
+| Scope | Method | Overall | NEW |
+|---|---|---:|---:|
+| all | history | 0.016 [0.016, 0.016] / 0.016 [0.016, 0.016] / 0.016 [0.016, 0.016] | 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] |
+| all | model | 0.013 [0.000, 0.038] / 0.003 [0.000, 0.006] / 0.000 [0.000, 0.000] | 0.012 [0.000, 0.035] / 0.002 [0.000, 0.006] / 0.000 [0.000, 0.000] |
+| all | hybrid | 0.013 [0.000, 0.038] / 0.003 [0.000, 0.006] / 0.000 [0.000, 0.000] | 0.012 [0.000, 0.035] / 0.002 [0.000, 0.006] / 0.000 [0.000, 0.000] |
+| in_universe | history | 0.023 [0.023, 0.023] / 0.023 [0.023, 0.023] / 0.023 [0.023, 0.023] | 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] / 0.000 [0.000, 0.000] |
+| in_universe | model | 0.013 [0.000, 0.038] / 0.003 [0.000, 0.006] / 0.000 [0.000, 0.000] | 0.011 [0.000, 0.034] / 0.002 [0.000, 0.006] / 0.000 [0.000, 0.000] |
+| in_universe | hybrid | 0.013 [0.000, 0.038] / 0.003 [0.000, 0.006] / 0.000 [0.000, 0.000] | 0.011 [0.000, 0.034] / 0.002 [0.000, 0.006] / 0.000 [0.000, 0.000] |
 
-Alert burden restricted to routes without any FIT history:
+D4 all city alert-index AUC: model 0.529 [0.497, 0.593]; history 0.500 [0.500, 0.500]; hybrid 0.529 [0.497, 0.593].
+D4 all NEW-route alert-index AUC: model 0.529 [0.497, 0.593]; history 0.500 [0.500, 0.500]; hybrid 0.529 [0.497, 0.593].
 
-| Scope / day type | History | Model P | Hybrid |
-|---|---:|---:|---:|
-| all / DEV record days | 0.000 [0.000, 0.000] | 0.011 [0.000, 0.034] | 0.011 [0.000, 0.034] |
-| all / rainy-season no-record days | 0.000 [0.000, 0.000] | 0.004 [0.001, 0.007] | 0.004 [0.001, 0.007] |
-| all / dry-season days | 0.000 [0.000, 0.000] | 0.001 [0.000, 0.001] | 0.001 [0.000, 0.001] |
-| in_universe / DEV record days | 0.000 [0.000, 0.000] | 0.011 [0.000, 0.032] | 0.011 [0.000, 0.032] |
-| in_universe / rainy-season no-record days | 0.000 [0.000, 0.000] | 0.002 [0.000, 0.005] | 0.002 [0.000, 0.005] |
-| in_universe / dry-season days | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] |
+D4 in_universe city alert-index AUC: model 0.529 [0.497, 0.593]; history 0.500 [0.500, 0.500]; hybrid 0.529 [0.497, 0.593].
+D4 in_universe NEW-route alert-index AUC: model 0.529 [0.497, 0.593]; history 0.500 [0.500, 0.500]; hybrid 0.529 [0.497, 0.593].
+
+D6: share of matched DEV flood-day records with route in top 5% / 20% by S_hyb, independent of T (all / NEW):
+
+| Scope | All records, top5 / top20 | NEW records, top5 / top20 |
+|---|---:|---:|
+| all | 0.425 [0.235, 0.599] / 0.885 [0.762, 0.988] | 0.369 [0.194, 0.552] / 0.874 [0.741, 0.988] |
+| in_universe | 0.372 [0.200, 0.547] / 0.887 [0.755, 0.992] | 0.311 [0.154, 0.484] / 0.875 [0.736, 0.991] |
 

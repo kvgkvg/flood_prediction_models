@@ -89,81 +89,123 @@ def fit_route_models(root=Path('.'),pilot=False,save=True):
     return scorer,manifest,features,training,rain_model,tide_model
 
 def percentile_score(raw,universe):
-    ref=np.sort(np.asarray(raw,dtype=np.float32)[np.asarray(universe,bool)]);score=np.asarray(raw,dtype=np.float32);return np.searchsorted(ref,score,side='right').astype(np.float32)/(len(ref)+1.)
+    ref=np.sort(np.asarray(raw,dtype=np.float32)[np.asarray(universe,bool)])
+    score=np.searchsorted(ref,np.asarray(raw,dtype=np.float32),side='right').astype(np.float32)/(len(ref)+1.)
+    score[~np.asarray(universe,bool)]*=.5
+    return score
 
-def route_trigger(rain_s,tide_s,t_rain,t_tide,h_rain=None,h_tide=None,h0=0.):
-    sr=np.asarray(rain_s,np.float32);st=np.asarray(tide_s,np.float32);hr=np.zeros_like(sr) if h_rain is None else np.asarray(h_rain,np.float32);ht=np.zeros_like(st) if h_tide is None else np.asarray(h_tide,np.float32)
+def route_trigger(rain_s,tide_s,t_rain,t_tide):
+    sr=np.asarray(rain_s,np.float32);st=np.asarray(tide_s,np.float32)
     tr=np.float32(t_rain);tt=np.float32(t_tide)
-    p=1.-(1.-sr*tr)*(1.-st*tt);hybr=1.-(1.-np.maximum(sr,h0*hr)*tr)*(1.-np.maximum(st,h0*ht)*tt)
-    return np.asarray(p,np.float32),np.asarray(hybr,np.float32)
+    return np.asarray(1.-(1.-sr*tr)*(1.-st*tt),np.float32)
 
-def levels(scores,fit_event_day_values):
-    x=np.asarray(fit_event_day_values,dtype=np.float32);x=x[np.isfinite(x)]
-    if not len(x):return {'medium':1.,'high':1.}
-    return {'medium':float(np.quantile(x,.80)),'high':float(np.quantile(x,.95))}
+def history_scores(joined,city,routes):
+    x=joined[(joined.city==city)&(joined.date.isna()|(joined.date<pd.Timestamp('2023-01-01')))]
+    out={}
+    for cause,causes in [('rain',{'rain','combined'}),('tide',{'tide','combined'})]:
+        g=x[x.cause.isin(causes)]
+        counts=g.dropna(subset=['date']).groupby('route_id').date.nunique().to_dict()
+        seen=set(g.route_id.astype(str));n=np.asarray([int(counts.get(r,0)) for r in routes],np.float32)
+        flag=np.asarray([r in seen for r in routes])
+        value=np.where(flag,.8+.2*np.minimum(1.,n/3.),0.).astype(np.float32)
+        out[cause]=(value,flag,n)
+    return out
 
-def _train_history(joined,city,excluded_year=None):
-    x=joined[joined.city==city]
-    if excluded_year is not None:x=x[x.date.isna()|(x.date.dt.year!=excluded_year)]
-    fit=x[x.date.isna()|(x.date<pd.Timestamp('2023-01-01'))]
-    rain=set(fit.loc[fit.cause.isin(['rain','combined']),'route_id'].astype(str));tide=set(fit.loc[fit.cause.isin(['tide','combined']),'route_id'].astype(str))
-    anyr=set(fit.route_id.astype(str));return rain,tide,anyr
+def route_bands(score,tie,mask):
+    ids=np.flatnonzero(np.asarray(mask,bool));state=np.zeros(len(mask),np.uint8)
+    if not len(ids):return state
+    order=np.lexsort((-np.asarray(tie)[ids],-np.asarray(score)[ids]))
+    a=max(1,int(np.ceil(.05*len(ids))));b=max(a,int(np.ceil(.20*len(ids))))
+    state[ids[order[:a]]]=2;state[ids[order[a:b]]]=1
+    return state
+
+def choose_day_thresholds(city,cause,trigger,records):
+    col='T_'+cause;fit=trigger.loc[trigger.index<pd.Timestamp('2023-01-01')]
+    r=records[(records.city==city)&records.date.notna()&(records.date<pd.Timestamp('2023-01-01'))]
+    accepted={'rain':{'rain','combined'},'tide':{'tide','combined'}}[cause]
+    posdays=set(pd.to_datetime(r.loc[r.cause.isin(accepted),'date']).dt.normalize())
+    monthset=set(range(5,12)) if city=='ho_chi_minh' else {9,10,11,12}
+    any_report_days=set(pd.to_datetime(r.date.dropna()).dt.normalize())
+    seasonal=fit.index.month.isin(monthset);negdays=set(fit.index[seasonal])-any_report_days
+    pos=fit.loc[fit.index.isin(posdays),col].dropna().to_numpy(float)
+    neg=fit.loc[fit.index.isin(negdays),col].dropna().to_numpy(float)
+    vals=fit[col].dropna().to_numpy(float)
+    if not len(pos) or not len(neg) or not len(vals):
+        return {'t_lo':1.000001,'t_hi':1.000002,'n_fit_positive_days':len(pos),'n_fit_no_report_days':len(neg),'targets_met':False,'selected_alert_sensitivity':0.,'selected_quiet_specificity':0.,'tradeoff':[]}
+    his=np.unique(np.quantile(vals,np.linspace(0,1,101)));min_gap=max(1e-6,.01*float(np.max(vals)-np.min(vals)))
+    curve=[];pairs=[]
+    for hi in his:
+        sens=float(np.mean(pos>=hi));ceiling=hi-min_gap
+        low_opts=np.unique(np.r_[neg[neg<=ceiling],np.nextafter(ceiling,-np.inf)])
+        low_opts=low_opts[low_opts<hi]
+        quiet=np.asarray([np.mean(neg<lo) for lo in low_opts]) if len(low_opts) else np.asarray([0.])
+        bestq=float(quiet.max());bestlo=float(low_opts[np.flatnonzero(quiet==bestq)[-1]]) if len(low_opts) else float(np.nextafter(hi,-np.inf))
+        curve.append({'t_hi':float(hi),'t_lo_for_best_quiet':bestlo,'min_gap':min_gap,'alert_sensitivity':sens,'quiet_specificity':bestq})
+        pairs.append((float(hi),bestlo,sens,bestq))
+    feasible=[p for p in pairs if p[2]>=.70 and p[3]>=.80]
+    if feasible:chosen=max(feasible,key=lambda p:(p[0],p[3],p[2]))
+    else:chosen=max(pairs,key=lambda p:(min(p[2]/.70,p[3]/.80),p[2]+p[3],p[0]))
+    hi,lo,sens,quiet=chosen
+    return {'t_lo':lo,'t_hi':hi,'n_fit_positive_days':len(pos),'n_fit_no_report_days':len(neg),'targets_met':bool(sens>=.70 and quiet>=.80),'selected_alert_sensitivity':sens,'selected_quiet_specificity':quiet,'tradeoff':curve}
+
+def day_state(t,threshold):
+    if t>=threshold['t_hi']:return 2
+    if t>=threshold['t_lo']:return 1
+    return 0
+
+def levels_from_bands(rain_band,tide_band,t_rain,t_tide,thresholds):
+    result=np.zeros(len(rain_band),np.uint8)
+    for band,t,cause in ((rain_band,t_rain,'rain'),(tide_band,t_tide,'tide')):
+        ds=day_state(float(t),thresholds[cause])
+        if ds==2:lev=np.where(band==2,2,np.where(band==1,1,0))
+        elif ds==1:lev=np.where(band==2,1,0)
+        else:lev=np.zeros(len(band),np.uint8)
+        result=np.maximum(result,lev.astype(np.uint8))
+    return result
 
 def _triggers(city,root=Path('.')):
-    x=pd.read_parquet(root/'data/processed'/city/'trigger_daily.parquet');x['date']=pd.to_datetime(x.date).dt.normalize();return x.set_index('date')
-
-def choose_h0(city,joined,route,sr,st,univ,trigger,grid=(0.,.25,.5,.75,1.)):
-    fit=joined[(joined.city==city)&(joined.date.notna())&(joined.date<pd.Timestamp('2023-01-01'))]
-    groups=fit.groupby('date',sort=True);scores={float(h):[] for h in grid};idx=pd.Index(route)
-    for date,g in groups:
-        if date not in trigger.index:continue
-        year=pd.Timestamp(date).year;hr,ht,_=_train_history(joined,city,year)
-        row=trigger.loc[date];tr=float(row.get('T_rain',0) or 0);tt=float(row.get('T_tide',0) or 0)
-        pos=set(g.loc[g.cause.isin(['rain','combined','tide']),'route_id'].astype(str));pos_ix=np.flatnonzero(np.asarray(idx.isin(pos))&univ)
-        if not len(pos_ix):continue
-        hrv=np.asarray(idx.isin(hr),np.float32);htv=np.asarray(idx.isin(ht),np.float32)
-        for h0 in grid:
-            _,ph=route_trigger(sr,st,tr,tt,hrv,htv,h0);ids=np.flatnonzero(univ);k=max(1,int(np.ceil(.20*len(ids))));order=ids[np.argsort(ph[ids],kind='stable')[::-1][:k]]
-            scores[float(h0)].append(float(np.isin(pos_ix,order).sum()/len(pos_ix)))
-    means={str(h):float(np.mean(v)) if v else 0. for h,v in scores.items()};best=max(scores,key=lambda h:(means[str(h)],-h));return best,means
+    x=pd.read_parquet(root/'data/processed'/city/'trigger_daily.parquet')
+    x['date']=pd.to_datetime(x.date).dt.normalize()
+    return x.set_index('date')
 
 def build_combination(root=Path('.'),pilot=False,save=True):
     scorer,manifest,features,training,rain_model,tide_model=fit_route_models(root,pilot=pilot,save=save)
-    if pilot:return {'best':_best_scorer(),'pilot_rows':{c:len(x) for c,x in features.items()},'training_rows':{c:len(x) for c,x in training.items()}}
+    if pilot:
+        return {'best':_best_scorer(),'pilot_rows':{c:len(x) for c,x in features.items()},'training_rows':{c:len(x) for c,x in training.items()}}
     rec=read_fit_records(root);joined=join_matched_records(rec,root)
-    fit=joined[joined.date.isna()|(joined.date<pd.Timestamp('2023-01-01'))]
-    scores={};trig={};h0meta={}
-    for city,ft in features.items():
-        rawr=scorer.predict(rain_model,ft);sr=percentile_score(rawr,ft.in_universe.astype(bool))
-        if city=='ho_chi_minh':rawt=scorer.predict(tide_model,ft);st=percentile_score(rawt,ft.in_universe.astype(bool))
-        else:st=np.zeros(len(ft),np.float32)
-        route=ft.route_id.astype(str).to_numpy();uni=ft.in_universe.to_numpy(bool);hr,ht,_=_train_history(joined,city)
-        hrv=np.isin(route,list(hr));htv=np.isin(route,list(ht));out=ft[['route_id','in_universe']].copy()
-        out['S_rain']=sr;out['S_tide']=st;out['H_rain']=hrv.astype(np.uint8);out['H_tide']=htv.astype(np.uint8);out['H_any']=(hrv|htv).astype(np.uint8)
-        roads=pd.read_parquet(root/'data/processed'/city/'routes.parquet',columns=['route_id','highway_class']);roads['route_id']=roads.route_id.astype(str);out=out.merge(roads,on='route_id',how='left',validate='one_to_one')
-        out.to_parquet(root/'data/processed'/city/'route_susceptibility.parquet',index=False);scores[city]=(out,route,sr.astype(np.float32),st.astype(np.float32),uni,hrv.astype(np.float32),htv.astype(np.float32))
-        trig[city]=_triggers(city,root)
-    for city,(out,route,sr,st,uni,hrv,htv) in scores.items():
-        h0,selection=choose_h0(city,joined,route,sr,st,uni,trig[city]);h0meta[city]={'h0':h0,'fit_cv_mean_top20_hit':selection,'selection_uses':'FIT flood dates; leave-event-year-out history flags; base M1/T fit on FIT only'}
-    Path('models').mkdir(exist_ok=True);Path('models/m2_history_h0.json').write_text(json.dumps({'max_fit_date':'2022-12-31','selection':h0meta},indent=2))
-    # Calibration days come from all eligible dated FIT records, including
-    # reports that could not be matched to an OSM route.
-    thresholds={};event_dates={c:sorted(pd.to_datetime(rec.loc[(rec.city==c)&rec.date.notna()&(rec.date<pd.Timestamp('2023-01-01')),'date']).dt.normalize().unique()) for c in scores}
-    alerts={}
-    for city,(out,route,sr,st,uni,hrv,htv) in scores.items():
-        h0=h0meta[city]['h0'];base_all=[];base_uni=[];hyb_all=[];hyb_uni=[]
-        for dt in event_dates[city]:
-            if dt not in trig[city].index:continue
-            q=trig[city].loc[dt];p,ph=route_trigger(sr,st,q.T_rain,q.T_tide,hrv,htv,h0)
-            base_all.append(p);base_uni.append(p[uni]);hyb_all.append(ph);hyb_uni.append(ph[uni])
-        thresholds[city]={}
-        for scope,base,hyb in [('all',base_all,hyb_all),('universe',base_uni,hyb_uni)]:
-            thresholds[city][scope]={'model':levels(None,np.concatenate(base) if base else []),'hybrid':levels(None,np.concatenate(hyb) if hyb else [])}
-        # DEV daily alert indices are computed one day at a time, never route×day materialized.
-        tdev=trig[city][(trig[city].index>='2023-01-01')&(trig[city].index<'2025-01-01')];daily=[]
+    models={};thresholds={}
+    for city,ft0 in features.items():
+        ft=ft0.reset_index(drop=True);route=ft.route_id.astype(str).to_numpy();uni=ft.in_universe.to_numpy(bool)
+        sm_r=percentile_score(scorer.predict(rain_model,ft),uni)
+        sm_t=percentile_score(scorer.predict(tide_model,ft),uni) if city=='ho_chi_minh' else np.zeros(len(ft),np.float32)
+        hist=history_scores(joined,city,route);sh_r=np.maximum(sm_r,hist['rain'][0]);sh_t=np.maximum(sm_t,hist['tide'][0])
+        out=ft[['route_id','in_universe']].copy()
+        out['S_rain']=sm_r;out['S_tide']=sm_t;out['S_hyb_rain']=sh_r;out['S_hyb_tide']=sh_t
+        out['S_hist_rain']=hist['rain'][0];out['S_hist_tide']=hist['tide'][0]
+        out['H_rain']=hist['rain'][1].astype(np.uint8);out['H_tide']=hist['tide'][1].astype(np.uint8);out['H_any']=(hist['rain'][1]|hist['tide'][1]).astype(np.uint8)
+        out['n_distinct_dates_rain']=hist['rain'][2].astype(np.uint16);out['n_distinct_dates_tide']=hist['tide'][2].astype(np.uint16)
+        out.to_parquet(root/'data/processed'/city/'route_susceptibility.parquet',index=False)
+        trig=_triggers(city,root)
+        thresholds[city]={cause:choose_day_thresholds(city,cause,trig,rec) for cause in ('rain','tide')}
+        models[city]=(out,route,uni,sm_r,sm_t,sh_r,sh_t,hist,trig)
+    Path('models').mkdir(exist_ok=True)
+    Path('models/combination_thresholds.json').write_text(json.dumps({'max_fit_date':'2022-12-31','rule':'T<t_lo quiet; t_lo<=T<t_hi watch; T>=t_hi alert; route bands A top 5%, B next 15%','targets':{'alert_sensitivity':.70,'quiet_specificity':.80},'thresholds':thresholds},indent=2))
+    h0_path=Path('models/m2_history_h0.json')
+    if h0_path.exists():h0_path.write_text(json.dumps({'superseded_by':'combination_thresholds.json','history_score':'0.80 + 0.20*min(1,n_distinct_dates/3)','h0':None},indent=2))
+    route_summary={}; dev_days={}
+    for city,(out,route,uni,sm_r,sm_t,sh_r,sh_t,hist,trig) in models.items():
+        daily=[];tdev=trig[(trig.index>='2023-01-01')&(trig.index<'2025-01-01')]
         for dt,q in tdev.iterrows():
-            p,ph=route_trigger(sr,st,q.T_rain,q.T_tide,hrv,htv,h0);th=thresholds[city]
-            daily.append({'date':dt,'model_alert_all':float(np.mean(p>=th['all']['model']['medium'])),'hybrid_alert_all':float(np.mean(ph>=th['all']['hybrid']['medium'])),'model_alert_universe':float(np.mean(p[uni]>=th['universe']['model']['medium'])),'hybrid_alert_universe':float(np.mean(ph[uni]>=th['universe']['hybrid']['medium']))})
-        ad=pd.DataFrame(daily);ad.to_parquet(root/'data/processed'/city/'daily_alert_index_dev.parquet',index=False);alerts[city]=len(ad)
-    Path('models/combination_thresholds.json').write_text(json.dumps({'max_fit_date':'2022-12-31','thresholds':thresholds},indent=2))
-    return {'best':_best_scorer(),'cities':{c:{'routes':len(v[0]),'in_universe':int(v[4].sum()),'fit_event_days':len(event_dates[c]),'h0':h0meta[c]['h0'],'dev_alert_days':alerts[c]} for c,v in scores.items()},'h0':h0meta,'thresholds':thresholds}
+            row={'date':dt};hm=hist['rain'][1]|hist['tide'][1]
+            for scope,mask in [('all',np.ones(len(route),bool)),('universe',uni)]:
+                modellev=levels_from_bands(route_bands(sm_r,sm_r,mask),route_bands(sm_t,sm_t,mask),q.T_rain,q.T_tide,thresholds[city])
+                hyblev=levels_from_bands(route_bands(sh_r,sm_r,mask),route_bands(sh_t,sm_t,mask),q.T_rain,q.T_tide,thresholds[city])
+                row[f'model_alert_{scope}']=float(np.mean(modellev[mask]>=1))
+                row[f'hybrid_alert_{scope}']=float(np.mean(hyblev[mask]>=1))
+                row[f'history_alert_{scope}']=float(np.mean(hm[mask]))
+            pm=route_trigger(sm_r,sm_t,q.T_rain,q.T_tide);ph=route_trigger(sh_r,sh_t,q.T_rain,q.T_tide)
+            row['P_model_mean']=float(np.mean(pm));row['P_hybrid_mean']=float(np.mean(ph));daily.append(row)
+        pd.DataFrame(daily).to_parquet(root/'data/processed'/city/'daily_alert_index_dev.parquet',index=False)
+        route_summary[city]={'total':len(route),'in_universe':int(uni.sum()),'fit_routes':len(training[city]),'fit_unlabeled_sampled':int((~training[city].route_id.isin(training[city].attrs.get('any_routes',set()))).sum())}
+        dev_days[city]=len(tdev)
+    return {'best':_best_scorer(),'routes':route_summary,'thresholds':{c:{cause:{k:v for k,v in params.items() if k!='tradeoff'} for cause,params in cs.items()} for c,cs in thresholds.items()},'dev_alert_days':dev_days,'fit_cutoff':'2022-12-31'}

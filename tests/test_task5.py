@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 
 from floodrisk.drivers import _cell_daily
-from floodrisk.combine import route_trigger, levels
+from floodrisk.combine import (route_trigger, route_bands, levels_from_bands,
+    history_scores, percentile_score)
 
 
 def test_rain_daily_rolling_stops_at_local_midnight_and_uses_local_dates():
@@ -23,15 +24,28 @@ def test_rain_daily_rolling_stops_at_local_midnight_and_uses_local_dates():
 
 
 def test_p_formula_and_hybrid_history_floor():
-    p,ph=route_trigger([.2,.8],[.1,.3],.5,.4,[0,1],[0,0],.6)
+    p=route_trigger([.2,.8],[.1,.3],.5,.4)
     expected=1-(1-np.array([.2,.8])*.5)*(1-np.array([.1,.3])*.4)
     assert np.allclose(p,expected,atol=1e-6)
-    assert ph[1]>=p[1]
+    model=np.array([.2,.8]);hist=np.array([.9,.0]);hyb=np.maximum(model,hist)
+    assert np.all(hyb>=model) and np.all(hyb>=hist)
 
 
-def test_levels_are_monotone():
-    v=levels(None,np.arange(100,dtype=np.float32))
-    assert v['medium']<=v['high']
+def test_day_and_route_states_follow_explicit_rules():
+    bands=np.array([2,1,0],np.uint8);th={'rain':{'t_lo':.3,'t_hi':.7},'tide':{'t_lo':.3,'t_hi':.7}}
+    assert levels_from_bands(bands,np.zeros(3,np.uint8),.8,0.,th).tolist()==[2,1,0]
+    assert levels_from_bands(bands,np.zeros(3,np.uint8),.5,0.,th).tolist()==[1,0,0]
+
+
+def test_out_of_universe_percentile_is_halved():
+    score=percentile_score([.1,.2,.3],[True,True,False])
+    assert 0<=score[0]<1 and 0<=score[1]<1 and score[2]<.5
+
+
+def test_history_score_uses_fit_distinct_dates():
+    j=pd.DataFrame({'city':['c']*4,'route_id':['a','a','a','b'],'date':pd.to_datetime(['2020-01-01','2020-02-01','2020-03-01',None]),'cause':['rain']*4})
+    got=history_scores(j,'c',['a','b','z'])['rain'][0]
+    assert np.allclose(got,[1.0,.8,0.0],atol=1e-7)
 
 
 def test_fitted_artifacts_have_pre_dev_cutoff_when_present():

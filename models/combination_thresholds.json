@@ -1,48 +1,2051 @@
 {
   "max_fit_date": "2022-12-31",
+  "rule": "T<t_lo quiet; t_lo<=T<t_hi watch; T>=t_hi alert; route bands A top 5%, B next 15%",
+  "targets": {
+    "alert_sensitivity": 0.7,
+    "quiet_specificity": 0.8
+  },
   "thresholds": {
     "ho_chi_minh": {
-      "all": {
-        "model": {
-          "medium": 0.04491788148880005,
-          "high": 0.5998157262802124
-        },
-        "hybrid": {
-          "medium": 0.04491788148880005,
-          "high": 0.5998157262802124
-        }
+      "rain": {
+        "t_lo": 0.0054866126334672995,
+        "t_hi": 0.010419984152540562,
+        "n_fit_positive_days": 30,
+        "n_fit_no_report_days": 4448,
+        "targets_met": false,
+        "selected_alert_sensitivity": 0.5,
+        "selected_quiet_specificity": 0.5629496402877698,
+        "tradeoff": [
+          {
+            "t_hi": 8.028993761399761e-05,
+            "t_lo_for_best_quiet": -0.004853081581459265,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.00036552438279613853,
+            "t_lo_for_best_quiet": -0.004567847136277124,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0004805123672122136,
+            "t_lo_for_best_quiet": -0.004452859151861049,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0005701214686268941,
+            "t_lo_for_best_quiet": -0.004363250050446368,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0006726900697685778,
+            "t_lo_for_best_quiet": -0.004260681449304684,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0007707676850259304,
+            "t_lo_for_best_quiet": -0.004162603834047332,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0008828382124193013,
+            "t_lo_for_best_quiet": -0.004050533306653961,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0009853994997683915,
+            "t_lo_for_best_quiet": -0.003947972019304871,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0010716995131224395,
+            "t_lo_for_best_quiet": -0.0038616720059508228,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0011528302473016083,
+            "t_lo_for_best_quiet": -0.0037805412717716535,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0012448084424249827,
+            "t_lo_for_best_quiet": -0.003688563076648279,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0013390483800321817,
+            "t_lo_for_best_quiet": -0.0035943231390410803,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.00142818340100348,
+            "t_lo_for_best_quiet": -0.003505188118069782,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0015183153830002993,
+            "t_lo_for_best_quiet": -0.003415056136072963,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.001618704991415143,
+            "t_lo_for_best_quiet": -0.003314666527658119,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.001697232376318425,
+            "t_lo_for_best_quiet": -0.003236139142754837,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0017756945686414837,
+            "t_lo_for_best_quiet": -0.0031576769504317783,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0018449913477525115,
+            "t_lo_for_best_quiet": -0.0030883801713207505,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.001919358456507325,
+            "t_lo_for_best_quiet": -0.003014013062565937,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0019889419595710937,
+            "t_lo_for_best_quiet": -0.0029444295595021683,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0020631362684071066,
+            "t_lo_for_best_quiet": -0.0028702352506661554,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0021354247629642486,
+            "t_lo_for_best_quiet": -0.0027979467561090134,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0022140747588127855,
+            "t_lo_for_best_quiet": -0.0027192967602604765,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0022927059093490244,
+            "t_lo_for_best_quiet": -0.0026406656097242376,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0023801879957318305,
+            "t_lo_for_best_quiet": -0.0025531835233414315,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0024611633270978928,
+            "t_lo_for_best_quiet": -0.0024722081919753692,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0025304907467216253,
+            "t_lo_for_best_quiet": -0.0024028807723516367,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.00261758302571252,
+            "t_lo_for_best_quiet": -0.002315788493360742,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9333333333333333,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0026563018374145034,
+            "t_lo_for_best_quiet": -0.0022770696816587586,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9333333333333333,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.002769985811319202,
+            "t_lo_for_best_quiet": -0.00216338570775406,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9333333333333333,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0028171132318675516,
+            "t_lo_for_best_quiet": -0.0021162582872057104,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9333333333333333,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.002921445935498923,
+            "t_lo_for_best_quiet": -0.002011925583574339,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9333333333333333,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.002939884448423982,
+            "t_lo_for_best_quiet": -0.00199348707064928,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9333333333333333,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0030263814213685692,
+            "t_lo_for_best_quiet": -0.0019069900977046925,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0030887466855347157,
+            "t_lo_for_best_quiet": -0.0018446248335385461,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0031484486069530255,
+            "t_lo_for_best_quiet": -0.0017849229121202363,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0032385510765016077,
+            "t_lo_for_best_quiet": -0.0016948204425716541,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.003277968615293503,
+            "t_lo_for_best_quiet": -0.001655402903779759,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0033168069040402774,
+            "t_lo_for_best_quiet": -0.0016165646150329844,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.9,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0033991247322410346,
+            "t_lo_for_best_quiet": -0.0015342467868322272,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.003496791236102581,
+            "t_lo_for_best_quiet": -0.0014365802829706808,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0035955536318942904,
+            "t_lo_for_best_quiet": -0.0013378178871789714,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.003696759247686714,
+            "t_lo_for_best_quiet": -0.0012366122713865478,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.003753220196813345,
+            "t_lo_for_best_quiet": -0.0011801513222599168,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.003818018399178982,
+            "t_lo_for_best_quiet": -0.00111535311989428,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.00391577007714659,
+            "t_lo_for_best_quiet": -0.0010176014419266716,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.004006803091615439,
+            "t_lo_for_best_quiet": -0.0009265684274578227,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0041182260029017925,
+            "t_lo_for_best_quiet": -0.0008151455161714691,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.004189158137887717,
+            "t_lo_for_best_quiet": -0.0007442133811855447,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.004284045659005642,
+            "t_lo_for_best_quiet": -0.0006493258600676197,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.004394595939666032,
+            "t_lo_for_best_quiet": -0.0005387755794072298,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.004511537565849722,
+            "t_lo_for_best_quiet": -0.00042183395322354,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.004580617509782313,
+            "t_lo_for_best_quiet": -0.00035275400929094854,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0046854361006990084,
+            "t_lo_for_best_quiet": -0.0002479354183742532,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.004823959926143285,
+            "t_lo_for_best_quiet": -0.0001094115929299762,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.004933129507116974,
+            "t_lo_for_best_quiet": -2.4201195628764665e-07,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8666666666666667,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.005065433941781521,
+            "t_lo_for_best_quiet": 0.0001320624227082595,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8333333333333334,
+            "quiet_specificity": 0.0002248201438848921
+          },
+          {
+            "t_hi": 0.0052252448163926605,
+            "t_lo_for_best_quiet": 0.00029187329731939887,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8333333333333334,
+            "quiet_specificity": 0.004721223021582734
+          },
+          {
+            "t_hi": 0.005361828375607729,
+            "t_lo_for_best_quiet": 0.00042845685653446723,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8333333333333334,
+            "quiet_specificity": 0.015737410071942445
+          },
+          {
+            "t_hi": 0.005502065997570754,
+            "t_lo_for_best_quiet": 0.0005686944784974922,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.8,
+            "quiet_specificity": 0.026528776978417268
+          },
+          {
+            "t_hi": 0.005650826077908277,
+            "t_lo_for_best_quiet": 0.0007174545588350157,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.7666666666666667,
+            "quiet_specificity": 0.039568345323741004
+          },
+          {
+            "t_hi": 0.005817649411037571,
+            "t_lo_for_best_quiet": 0.0008842778919643097,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.7666666666666667,
+            "quiet_specificity": 0.053282374100719426
+          },
+          {
+            "t_hi": 0.006016203062608839,
+            "t_lo_for_best_quiet": 0.0010828315435355768,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.7333333333333333,
+            "quiet_specificity": 0.07441546762589928
+          },
+          {
+            "t_hi": 0.006161850420758128,
+            "t_lo_for_best_quiet": 0.0012284789016848662,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.7333333333333333,
+            "quiet_specificity": 0.08812949640287769
+          },
+          {
+            "t_hi": 0.006373997367918487,
+            "t_lo_for_best_quiet": 0.0014406258488452249,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.7,
+            "quiet_specificity": 0.1079136690647482
+          },
+          {
+            "t_hi": 0.006579187796451151,
+            "t_lo_for_best_quiet": 0.0016458162773778891,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.7,
+            "quiet_specificity": 0.12904676258992806
+          },
+          {
+            "t_hi": 0.006793603096157312,
+            "t_lo_for_best_quiet": 0.00186023157708405,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.7,
+            "quiet_specificity": 0.15557553956834533
+          },
+          {
+            "t_hi": 0.007023040787316859,
+            "t_lo_for_best_quiet": 0.0020896692682435968,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.7,
+            "quiet_specificity": 0.1845773381294964
+          },
+          {
+            "t_hi": 0.007276447676122189,
+            "t_lo_for_best_quiet": 0.0023430761570489267,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.7,
+            "quiet_specificity": 0.2135791366906475
+          },
+          {
+            "t_hi": 0.007478293324820698,
+            "t_lo_for_best_quiet": 0.0025449218057474357,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.6333333333333333,
+            "quiet_specificity": 0.2385341726618705
+          },
+          {
+            "t_hi": 0.007674511903896929,
+            "t_lo_for_best_quiet": 0.002741140384823667,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.6333333333333333,
+            "quiet_specificity": 0.2607913669064748
+          },
+          {
+            "t_hi": 0.007932636793702841,
+            "t_lo_for_best_quiet": 0.002999265274629579,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.6333333333333333,
+            "quiet_specificity": 0.29631294964028776
+          },
+          {
+            "t_hi": 0.008159250393509869,
+            "t_lo_for_best_quiet": 0.0032258788744366066,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.6333333333333333,
+            "quiet_specificity": 0.32419064748201437
+          },
+          {
+            "t_hi": 0.008435638342052697,
+            "t_lo_for_best_quiet": 0.0035022668229794354,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.6333333333333333,
+            "quiet_specificity": 0.3601618705035971
+          },
+          {
+            "t_hi": 0.008666546046733859,
+            "t_lo_for_best_quiet": 0.0037331745276605968,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.6,
+            "quiet_specificity": 0.3830935251798561
+          },
+          {
+            "t_hi": 0.008999673565849664,
+            "t_lo_for_best_quiet": 0.004066302046776401,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.6,
+            "quiet_specificity": 0.4204136690647482
+          },
+          {
+            "t_hi": 0.009327890984714031,
+            "t_lo_for_best_quiet": 0.0043945194656407685,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.6,
+            "quiet_specificity": 0.45638489208633093
+          },
+          {
+            "t_hi": 0.00966073740273714,
+            "t_lo_for_best_quiet": 0.004727365883663877,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.5333333333333333,
+            "quiet_specificity": 0.491681654676259
+          },
+          {
+            "t_hi": 0.010048839207738637,
+            "t_lo_for_best_quiet": 0.005115467688665375,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.5333333333333333,
+            "quiet_specificity": 0.5301258992805755
+          },
+          {
+            "t_hi": 0.010419984152540562,
+            "t_lo_for_best_quiet": 0.0054866126334672995,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.5,
+            "quiet_specificity": 0.5629496402877698
+          },
+          {
+            "t_hi": 0.010929814353585244,
+            "t_lo_for_best_quiet": 0.0059964428345119815,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.4,
+            "quiet_specificity": 0.6013938848920863
+          },
+          {
+            "t_hi": 0.011447114096954465,
+            "t_lo_for_best_quiet": 0.006513742577881202,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.4,
+            "quiet_specificity": 0.6409622302158273
+          },
+          {
+            "t_hi": 0.011948300711810592,
+            "t_lo_for_best_quiet": 0.007014929192737329,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.4,
+            "quiet_specificity": 0.6726618705035972
+          },
+          {
+            "t_hi": 0.012657281160354613,
+            "t_lo_for_best_quiet": 0.00772390964128135,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.4,
+            "quiet_specificity": 0.7189748201438849
+          },
+          {
+            "t_hi": 0.013383902795612815,
+            "t_lo_for_best_quiet": 0.00845053127653955,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.4,
+            "quiet_specificity": 0.7578687050359713
+          },
+          {
+            "t_hi": 0.014303726665675642,
+            "t_lo_for_best_quiet": 0.009370355146602378,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.3333333333333333,
+            "quiet_specificity": 0.8012589928057554
+          },
+          {
+            "t_hi": 0.01523017372936012,
+            "t_lo_for_best_quiet": 0.010296802210286856,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.3333333333333333,
+            "quiet_specificity": 0.835431654676259
+          },
+          {
+            "t_hi": 0.016755994502455004,
+            "t_lo_for_best_quiet": 0.01182262298338174,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.3333333333333333,
+            "quiet_specificity": 0.8781474820143885
+          },
+          {
+            "t_hi": 0.018812276273965825,
+            "t_lo_for_best_quiet": 0.01387890475489256,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.2,
+            "quiet_specificity": 0.9147931654676259
+          },
+          {
+            "t_hi": 0.02172549935057755,
+            "t_lo_for_best_quiet": 0.016792127831504283,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.2,
+            "quiet_specificity": 0.9471672661870504
+          },
+          {
+            "t_hi": 0.026934608444571493,
+            "t_lo_for_best_quiet": 0.022001236925498227,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.13333333333333333,
+            "quiet_specificity": 0.9721223021582733
+          },
+          {
+            "t_hi": 0.03759069342166184,
+            "t_lo_for_best_quiet": 0.03265732190258857,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.06666666666666667,
+            "quiet_specificity": 0.9889838129496403
+          },
+          {
+            "t_hi": 0.4934174418449402,
+            "t_lo_for_best_quiet": 0.4884840703258669,
+            "min_gap": 0.004933371519073262,
+            "alert_sensitivity": 0.0,
+            "quiet_specificity": 1.0
+          }
+        ]
       },
-      "universe": {
-        "model": {
-          "medium": 0.40334004163742065,
-          "high": 0.7312661409378052
-        },
-        "hybrid": {
-          "medium": 0.40334004163742065,
-          "high": 0.7312661409378052
-        }
+      "tide": {
+        "t_lo": 0.5718924778699874,
+        "t_hi": 0.581133896112442,
+        "n_fit_positive_days": 25,
+        "n_fit_no_report_days": 4448,
+        "targets_met": true,
+        "selected_alert_sensitivity": 0.72,
+        "selected_quiet_specificity": 0.9593075539568345,
+        "tradeoff": [
+          {
+            "t_hi": 2.3496984164751153e-21,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 5.350729243577691e-21,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.115468937249284e-20,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.2806789993074442e-20,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.641326107617283e-20,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 9.169062926951126e-20,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.8167715933142454e-19,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 3.436961160135123e-19,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 7.041751869203757e-19,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.4588438007405572e-18,
+            "t_lo_for_best_quiet": -0.009241418242454528,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.93283083831416e-18,
+            "t_lo_for_best_quiet": -0.009241418242454526,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 6.228207825357043e-18,
+            "t_lo_for_best_quiet": -0.009241418242454523,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.156912900119744e-17,
+            "t_lo_for_best_quiet": -0.009241418242454518,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.0836470982173058e-17,
+            "t_lo_for_best_quiet": -0.009241418242454509,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.0276175766947665e-17,
+            "t_lo_for_best_quiet": -0.00924141824245449,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 8.441467188824778e-17,
+            "t_lo_for_best_quiet": -0.009241418242454445,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.6665909514963071e-16,
+            "t_lo_for_best_quiet": -0.009241418242454363,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 3.2466557324842036e-16,
+            "t_lo_for_best_quiet": -0.009241418242454206,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 6.163900674712519e-16,
+            "t_lo_for_best_quiet": -0.009241418242453914,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.1127972668073548e-15,
+            "t_lo_for_best_quiet": -0.009241418242453418,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.1992891991069748e-15,
+            "t_lo_for_best_quiet": -0.00924141824245233,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.148870264743667e-15,
+            "t_lo_for_best_quiet": -0.00924141824245038,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.96,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 7.539207481915966e-15,
+            "t_lo_for_best_quiet": -0.00924141824244699,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.96,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.3830071087645155e-14,
+            "t_lo_for_best_quiet": -0.0092414182424407,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.96,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.5906472198586662e-14,
+            "t_lo_for_best_quiet": -0.009241418242428624,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.96,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.946587962780273e-14,
+            "t_lo_for_best_quiet": -0.009241418242405064,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.96,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 9.369357638908464e-14,
+            "t_lo_for_best_quiet": -0.009241418242360836,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.96,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.7354954401208912e-13,
+            "t_lo_for_best_quiet": -0.00924141824228098,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.96,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 3.0767537064109483e-13,
+            "t_lo_for_best_quiet": -0.009241418242146854,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.96,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 5.865875081674507e-13,
+            "t_lo_for_best_quiet": -0.009241418241867942,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.96,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.1379132445338277e-12,
+            "t_lo_for_best_quiet": -0.009241418241316617,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.96,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.2164420494276413e-12,
+            "t_lo_for_best_quiet": -0.009241418240238088,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.96,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.132737017187304e-12,
+            "t_lo_for_best_quiet": -0.009241418238321792,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.96,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 7.608650168244857e-12,
+            "t_lo_for_best_quiet": -0.00924141823484588,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.294063873419349e-11,
+            "t_lo_for_best_quiet": -0.009241418229513892,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.278559441820651e-11,
+            "t_lo_for_best_quiet": -0.009241418219668935,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.103923464948647e-11,
+            "t_lo_for_best_quiet": -0.009241418201415295,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 6.924074744119013e-11,
+            "t_lo_for_best_quiet": -0.009241418173213783,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.0752596799057389e-10,
+            "t_lo_for_best_quiet": -0.009241418134928563,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.8475080965085769e-10,
+            "t_lo_for_best_quiet": -0.00924141805770372,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 3.2711922060002564e-10,
+            "t_lo_for_best_quiet": -0.00924141791533531,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 5.486910120700053e-10,
+            "t_lo_for_best_quiet": -0.009241417693763517,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 9.08035868718571e-10,
+            "t_lo_for_best_quiet": -0.009241417334418661,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.5307910816719788e-09,
+            "t_lo_for_best_quiet": -0.009241416711663447,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.604189273114347e-09,
+            "t_lo_for_best_quiet": -0.009241415638265256,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.21869403854914e-09,
+            "t_lo_for_best_quiet": -0.009241414023760492,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 6.793234579305367e-09,
+            "t_lo_for_best_quiet": -0.009241411449219951,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.075245863901843e-08,
+            "t_lo_for_best_quiet": -0.009241407489995891,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.8955789897745488e-08,
+            "t_lo_for_best_quiet": -0.009241399286664632,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.9621039203675528e-08,
+            "t_lo_for_best_quiet": -0.009241388621415327,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.220025218160117e-08,
+            "t_lo_for_best_quiet": -0.009241376042202348,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 6.305868978984112e-08,
+            "t_lo_for_best_quiet": -0.00924135518376474,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 9.443223348171168e-08,
+            "t_lo_for_best_quiet": -0.009241323810221047,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.4400947819126487e-07,
+            "t_lo_for_best_quiet": -0.009241274232976339,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.146111245338036e-07,
+            "t_lo_for_best_quiet": -0.009241203631329997,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.8216636138722617e-07,
+            "t_lo_for_best_quiet": -0.009241136076093143,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.0303281252818154e-07,
+            "t_lo_for_best_quiet": -0.009241015209642002,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 6.353940608505642e-07,
+            "t_lo_for_best_quiet": -0.00924078284839368,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 9.9100561101295e-07,
+            "t_lo_for_best_quiet": -0.009240427236843518,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.4797163453295074e-06,
+            "t_lo_for_best_quiet": -0.009239938526109201,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.221198337792882e-06,
+            "t_lo_for_best_quiet": -0.009239197044116737,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 3.278421177128621e-06,
+            "t_lo_for_best_quiet": -0.009238139821277401,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.500842833294874e-06,
+            "t_lo_for_best_quiet": -0.009236917399621234,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 6.31426522431867e-06,
+            "t_lo_for_best_quiet": -0.009235103977230211,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 9.345680409751363e-06,
+            "t_lo_for_best_quiet": -0.009232072562044778,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.3275821174829616e-05,
+            "t_lo_for_best_quiet": -0.0092281424212797,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.92,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.9374909206817393e-05,
+            "t_lo_for_best_quiet": -0.009222043333247713,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.8346720373519943e-05,
+            "t_lo_for_best_quiet": -0.00921307152208101,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.194016815745272e-05,
+            "t_lo_for_best_quiet": -0.009199478074297078,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 6.177621347887943e-05,
+            "t_lo_for_best_quiet": -0.00917964202897565,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 9.17676588869655e-05,
+            "t_lo_for_best_quiet": -0.009149650583567565,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.00013998656664625735,
+            "t_lo_for_best_quiet": -0.009101431675808272,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.00021019442181568413,
+            "t_lo_for_best_quiet": -0.009031223820638846,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0003276835338328965,
+            "t_lo_for_best_quiet": -0.008913734708621633,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0004877861612476404,
+            "t_lo_for_best_quiet": -0.00875363208120689,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0006805698940297589,
+            "t_lo_for_best_quiet": -0.008560848348424771,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0010134289925918,
+            "t_lo_for_best_quiet": -0.00822798924986273,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.001453612849581988,
+            "t_lo_for_best_quiet": -0.007787805392872541,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0020445430465042963,
+            "t_lo_for_best_quiet": -0.007196875195950233,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0030453958106227285,
+            "t_lo_for_best_quiet": -0.006196022431831801,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.004792464897036569,
+            "t_lo_for_best_quiet": -0.00444895334541796,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.007035079952329399,
+            "t_lo_for_best_quiet": -0.0022063382901251296,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.010319738276302858,
+            "t_lo_for_best_quiet": 0.001078320033848329,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.8172212230215827
+          },
+          {
+            "t_hi": 0.01447468128055344,
+            "t_lo_for_best_quiet": 0.0052332630380989105,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.8484712230215827
+          },
+          {
+            "t_hi": 0.02245051085948944,
+            "t_lo_for_best_quiet": 0.013209092617034911,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.8673561151079137
+          },
+          {
+            "t_hi": 0.032940281368791985,
+            "t_lo_for_best_quiet": 0.02369886312633745,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.8803956834532374
+          },
+          {
+            "t_hi": 0.049426221549510964,
+            "t_lo_for_best_quiet": 0.04018480330705643,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.8902877697841727
+          },
+          {
+            "t_hi": 0.06889356620609752,
+            "t_lo_for_best_quiet": 0.05965214796364298,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.88,
+            "quiet_specificity": 0.8988309352517986
+          },
+          {
+            "t_hi": 0.09526342123746881,
+            "t_lo_for_best_quiet": 0.08602200299501427,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.84,
+            "quiet_specificity": 0.90625
+          },
+          {
+            "t_hi": 0.1382831855118274,
+            "t_lo_for_best_quiet": 0.12904176726937283,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.84,
+            "quiet_specificity": 0.9156924460431655
+          },
+          {
+            "t_hi": 0.20154143869876887,
+            "t_lo_for_best_quiet": 0.1923000204563143,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.8,
+            "quiet_specificity": 0.9244604316546763
+          },
+          {
+            "t_hi": 0.2636409959197044,
+            "t_lo_for_best_quiet": 0.25439957767724986,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.76,
+            "quiet_specificity": 0.9316546762589928
+          },
+          {
+            "t_hi": 0.330308028459549,
+            "t_lo_for_best_quiet": 0.32106661021709443,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.76,
+            "quiet_specificity": 0.9388489208633094
+          },
+          {
+            "t_hi": 0.41417640388011934,
+            "t_lo_for_best_quiet": 0.4049349856376648,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.76,
+            "quiet_specificity": 0.9453687050359713
+          },
+          {
+            "t_hi": 0.5024719667434697,
+            "t_lo_for_best_quiet": 0.49323054850101516,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.72,
+            "quiet_specificity": 0.9525629496402878
+          },
+          {
+            "t_hi": 0.581133896112442,
+            "t_lo_for_best_quiet": 0.5718924778699874,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.72,
+            "quiet_specificity": 0.9593075539568345
+          },
+          {
+            "t_hi": 0.6758252477645873,
+            "t_lo_for_best_quiet": 0.6665838295221327,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.68,
+            "quiet_specificity": 0.9671762589928058
+          },
+          {
+            "t_hi": 0.7423205649852752,
+            "t_lo_for_best_quiet": 0.7330791467428206,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.64,
+            "quiet_specificity": 0.9736960431654677
+          },
+          {
+            "t_hi": 0.7951019930839538,
+            "t_lo_for_best_quiet": 0.7858605748414992,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.56,
+            "quiet_specificity": 0.979091726618705
+          },
+          {
+            "t_hi": 0.8593684035539626,
+            "t_lo_for_best_quiet": 0.850126985311508,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.36,
+            "quiet_specificity": 0.9867356115107914
+          },
+          {
+            "t_hi": 0.9241418242454529,
+            "t_lo_for_best_quiet": 0.9149004060029983,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.0,
+            "quiet_specificity": 0.9984262589928058
+          }
+        ]
       }
     },
     "da_nang": {
-      "all": {
-        "model": {
-          "medium": 0.628809928894043,
-          "high": 0.8363726139068604
-        },
-        "hybrid": {
-          "medium": 0.628809928894043,
-          "high": 0.8363726139068604
-        }
+      "rain": {
+        "t_lo": 0.7926194226741764,
+        "t_hi": 0.801860840916631,
+        "n_fit_positive_days": 1,
+        "n_fit_no_report_days": 2561,
+        "targets_met": true,
+        "selected_alert_sensitivity": 1.0,
+        "selected_quiet_specificity": 0.9777430691136275,
+        "tradeoff": [
+          {
+            "t_hi": 3.675546678841261e-20,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 5.689820650817675e-20,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 7.781132279686624e-20,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.0471211765218401e-19,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.6472656956609696e-19,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.1151310700892382e-19,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 3.0689336473785277e-19,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.47773234897538e-19,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 5.540657368154489e-19,
+            "t_lo_for_best_quiet": -0.00924141824245453,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 9.47935953891122e-19,
+            "t_lo_for_best_quiet": -0.009241418242454528,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.0303153880831609e-18,
+            "t_lo_for_best_quiet": -0.009241418242454528,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.885005788218195e-18,
+            "t_lo_for_best_quiet": -0.009241418242454528,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.6984272831892168e-18,
+            "t_lo_for_best_quiet": -0.009241418242454526,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.24835413113866e-18,
+            "t_lo_for_best_quiet": -0.009241418242454526,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 7.109822505685186e-18,
+            "t_lo_for_best_quiet": -0.009241418242454523,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.1548223864099742e-17,
+            "t_lo_for_best_quiet": -0.009241418242454518,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.0189467611652508e-17,
+            "t_lo_for_best_quiet": -0.009241418242454509,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 3.753645484589413e-17,
+            "t_lo_for_best_quiet": -0.009241418242454492,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 6.132910184980124e-17,
+            "t_lo_for_best_quiet": -0.00924141824245447,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.0956649767164683e-16,
+            "t_lo_for_best_quiet": -0.00924141824245442,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.6228210268727542e-16,
+            "t_lo_for_best_quiet": -0.009241418242454367,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 3.2856890806304364e-16,
+            "t_lo_for_best_quiet": -0.009241418242454202,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.910429989734471e-16,
+            "t_lo_for_best_quiet": -0.009241418242454039,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 8.954604678267889e-16,
+            "t_lo_for_best_quiet": -0.009241418242453635,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.3347932700406634e-15,
+            "t_lo_for_best_quiet": -0.009241418242453196,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.8287528717767987e-15,
+            "t_lo_for_best_quiet": -0.0092414182424517,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 5.034157600058534e-15,
+            "t_lo_for_best_quiet": -0.009241418242449496,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 7.68120477976069e-15,
+            "t_lo_for_best_quiet": -0.009241418242446849,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.3480934237300977e-14,
+            "t_lo_for_best_quiet": -0.00924141824244105,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.222630208408103e-14,
+            "t_lo_for_best_quiet": -0.009241418242432303,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.420228221532589e-14,
+            "t_lo_for_best_quiet": -0.009241418242410327,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 6.266043639632712e-14,
+            "t_lo_for_best_quiet": -0.00924141824239187,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.1324638736530737e-13,
+            "t_lo_for_best_quiet": -0.009241418242341284,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.852926694728436e-13,
+            "t_lo_for_best_quiet": -0.009241418242269237,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.802377926068582e-13,
+            "t_lo_for_best_quiet": -0.009241418242174292,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.778706483256015e-13,
+            "t_lo_for_best_quiet": -0.009241418241976659,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 8.878265418850451e-13,
+            "t_lo_for_best_quiet": -0.009241418241566704,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.463778534147031e-12,
+            "t_lo_for_best_quiet": -0.009241418240990751,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.4133626954497833e-12,
+            "t_lo_for_best_quiet": -0.009241418240041167,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 3.978962558742749e-12,
+            "t_lo_for_best_quiet": -0.009241418238475567,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 6.5602002996545394e-12,
+            "t_lo_for_best_quiet": -0.00924141823589433,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.0815941892117209e-11,
+            "t_lo_for_best_quiet": -0.009241418231638588,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.783247334519178e-11,
+            "t_lo_for_best_quiet": -0.009241418224622057,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.5864360323618638e-11,
+            "t_lo_for_best_quiet": -0.009241418216590169,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.8473686869998645e-11,
+            "t_lo_for_best_quiet": -0.009241418193980843,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 6.22414481066258e-11,
+            "t_lo_for_best_quiet": -0.009241418180213082,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.103380906086754e-10,
+            "t_lo_for_best_quiet": -0.009241418132116439,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.789468100949932e-10,
+            "t_lo_for_best_quiet": -0.00924141796350772,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 3.835646605887505e-10,
+            "t_lo_for_best_quiet": -0.009241417858889869,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 5.905304023556823e-10,
+            "t_lo_for_best_quiet": -0.009241417651924128,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 9.736200734522527e-10,
+            "t_lo_for_best_quiet": -0.009241417268834456,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.06115369216775e-09,
+            "t_lo_for_best_quiet": -0.009241416181300838,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.64657362691878e-09,
+            "t_lo_for_best_quiet": -0.009241415595880903,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.94445062670934e-09,
+            "t_lo_for_best_quiet": -0.009241413298003903,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 7.194132845000922e-09,
+            "t_lo_for_best_quiet": -0.009241411048321685,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.5229979055675358e-08,
+            "t_lo_for_best_quiet": -0.009241403012475474,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.510999053129126e-08,
+            "t_lo_for_best_quiet": -0.009241393132463999,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.139937459513021e-08,
+            "t_lo_for_best_quiet": -0.009241376843079935,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 8.764247638737288e-08,
+            "t_lo_for_best_quiet": -0.009241330599978143,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.4803408348029815e-07,
+            "t_lo_for_best_quiet": -0.009241270208371049,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.3823690753488336e-07,
+            "t_lo_for_best_quiet": -0.009241180005546995,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.2453215854720784e-07,
+            "t_lo_for_best_quiet": -0.009240993710295983,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 8.315280410897685e-07,
+            "t_lo_for_best_quiet": -0.00924058671441344,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.370957193103095e-06,
+            "t_lo_for_best_quiet": -0.009240047285261427,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.2603242086915998e-06,
+            "t_lo_for_best_quiet": -0.009239157918245838,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.785094461112749e-06,
+            "t_lo_for_best_quiet": -0.009236633147993417,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 7.889262633398175e-06,
+            "t_lo_for_best_quiet": -0.009233528979821132,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 1.6701422282494605e-05,
+            "t_lo_for_best_quiet": -0.009224716820172035,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 2.7535690605873242e-05,
+            "t_lo_for_best_quiet": -0.009213882551848657,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 4.539786823443137e-05,
+            "t_lo_for_best_quiet": -0.009196020374220099,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 9.610241249902174e-05,
+            "t_lo_for_best_quiet": -0.009145315829955508,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0001545816379075519,
+            "t_lo_for_best_quiet": -0.009086836604546978,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.00023050671734381467,
+            "t_lo_for_best_quiet": -0.009010911525110715,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0004946768167428672,
+            "t_lo_for_best_quiet": -0.008746741425711663,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0007096704212017357,
+            "t_lo_for_best_quiet": -0.008531747821252794,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.001325022429227829,
+            "t_lo_for_best_quiet": -0.007916395813226701,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.002223641611635685,
+            "t_lo_for_best_quiet": -0.007017776630818844,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.0034474513959139585,
+            "t_lo_for_best_quiet": -0.0057939668465405705,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.006153251510113478,
+            "t_lo_for_best_quiet": -0.003088166732341051,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.0
+          },
+          {
+            "t_hi": 0.010203804820775986,
+            "t_lo_for_best_quiet": 0.0009623865783214574,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.8114017961733698
+          },
+          {
+            "t_hi": 0.01798621006309986,
+            "t_lo_for_best_quiet": 0.008744791820645331,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.8551347130027334
+          },
+          {
+            "t_hi": 0.02931223064661026,
+            "t_lo_for_best_quiet": 0.020070812404155727,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.8711440843420539
+          },
+          {
+            "t_hi": 0.0540432664752017,
+            "t_lo_for_best_quiet": 0.04480184823274716,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.8879344006247559
+          },
+          {
+            "t_hi": 0.09534946829080582,
+            "t_lo_for_best_quiet": 0.08610805004835127,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.9027723545490043
+          },
+          {
+            "t_hi": 0.14576005935668945,
+            "t_lo_for_best_quiet": 0.1365186411142349,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.9133151112846545
+          },
+          {
+            "t_hi": 0.22270013391971588,
+            "t_lo_for_best_quiet": 0.21345871567726132,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.9242483404919953
+          },
+          {
+            "t_hi": 0.32437676191329956,
+            "t_lo_for_best_quiet": 0.315135343670845,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.9344006247559548
+          },
+          {
+            "t_hi": 0.45854508876800537,
+            "t_lo_for_best_quiet": 0.4493036705255508,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.946114798906677
+          },
+          {
+            "t_hi": 0.6444418430328369,
+            "t_lo_for_best_quiet": 0.6352004247903823,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.9609527528309254
+          },
+          {
+            "t_hi": 0.801860840916631,
+            "t_lo_for_best_quiet": 0.7926194226741764,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 1.0,
+            "quiet_specificity": 0.9777430691136275
+          },
+          {
+            "t_hi": 0.9241418242454529,
+            "t_lo_for_best_quiet": 0.9149004060029983,
+            "min_gap": 0.009241418242454528,
+            "alert_sensitivity": 0.0,
+            "quiet_specificity": 0.9992190550566185
+          }
+        ]
       },
-      "universe": {
-        "model": {
-          "medium": 0.724461019039154,
-          "high": 0.8602854013442993
-        },
-        "hybrid": {
-          "medium": 0.724461019039154,
-          "high": 0.8602854013442993
-        }
+      "tide": {
+        "t_lo": 1.000001,
+        "t_hi": 1.000002,
+        "n_fit_positive_days": 0,
+        "n_fit_no_report_days": 2561,
+        "targets_met": false,
+        "selected_alert_sensitivity": 0.0,
+        "selected_quiet_specificity": 0.0,
+        "tradeoff": []
       }
     }
   }
