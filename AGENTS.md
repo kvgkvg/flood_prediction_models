@@ -18,3 +18,9 @@
 - Ghi tiến độ vào `reports/task_log.md` NGAY sau mỗi bước con xong (thêm dòng, không ghi đè): thời điểm, bước, lệnh đã chạy, kết quả/số liệu chính, lỗi. Nếu bị hết giờ giữa chừng, file này là báo cáo.
 - Dành 5 phút cuối để dừng việc và viết báo cáo; không bắt đầu bước dài khi còn dưới 10 phút.
 - Tin nhắn cuối cùng luôn theo mẫu: `STATUS: DONE | PARTIAL | BLOCKED`, rồi (1) file đã sửa, (2) lệnh test và kết quả, (3) số liệu chính, (4) việc chưa xong kèm lệnh chạy tiếp, (5) đề xuất bước kế tiếp.
+
+# An toàn bộ nhớ (bắt buộc — phiên trước đã bị OOM lúc 04:54 06/10, tiến trình python 5,5 GB RSS làm sập cả phiên)
+- Toàn bộ phiên Codex chạy trong cgroup giới hạn 6 GB RAM, không swap. Vượt trần là tiến trình bị kill (exit 137) — coi đó là lỗi cần sửa thuật toán, không chạy lại y nguyên.
+- TRƯỚC mỗi lệnh nặng: chạy `free -m` và `nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader`; nếu RAM available < 5 GB hoặc VRAM trống < 2 GB (khi cần GPU) thì dừng và báo cáo.
+- Mỗi bước mới chạy thử trên tập con nhỏ trước, đo bằng `/usr/bin/time -v` (Maximum resident set size), ước lượng cho toàn bộ rồi mới chạy thật; mục tiêu < 3 GB mỗi tiến trình. Chỉ chạy MỘT tiến trình nặng tại một thời điểm.
+- Đọc parquet chỉ lấy cột cần dùng; không cross-join route × ngày trong RAM (tính theo lô ngày hoặc lô tuyến, ghi ra đĩa); dùng float32; utide: `conf_int='none'`, khớp trên tối đa ~5 năm số liệu giờ, dự báo theo từng năm.
