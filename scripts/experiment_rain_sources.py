@@ -9,12 +9,12 @@ import pandas as pd
 import requests
 from floodrisk.cities import CITIES
 
-TURN_STATE=Path('data/raw/open_meteo/.task6_weight.json')
-TURN_CAP=3500
+TURN_STATE=Path('data/raw/open_meteo/.task7_weight.json')
+TURN_CAP=1500
 UA='floodrisk-hackathon/0.1 (historical precipitation comparison; contact unavailable)'
 SOURCES={
  'historical_forecast':{'url':'https://historical-forecast-api.open-meteo.com/v1/forecast','years':[2022,2023,2024],'models':None},
- 'ecmwf_ifs':{'url':'https://archive-api.open-meteo.com/v1/archive','years':[2017,2018,2022,2023,2024],'models':'ecmwf_ifs'},
+ 'ecmwf_ifs':{'url':'https://archive-api.open-meteo.com/v1/archive','years':list(range(2017,2025)),'models':'ecmwf_ifs'},
 }
 
 def points(city):
@@ -71,7 +71,8 @@ def download(pilot=False):
     for source,cfg in SOURCES.items():
         for city in ('ho_chi_minh','da_nang'):
             for year in cfg['years']:plan.append((source,city,year))
-    if pilot: plan=plan[:1]
+    if pilot:
+        plan=[item for item in plan if not (Path('data/raw/rain_source_experiments')/item[0]/item[1]/f'{item[2]}.parquet').exists()][:1]
     for i,(source,city,year) in enumerate(plan,1):
         print(f'[{i}/{len(plan)}] {source} {city} {year}',flush=True)
         result=fetch_one(source,city,year,session)

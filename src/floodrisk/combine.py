@@ -40,10 +40,10 @@ def join_matched_records(records,root=Path('.')):
     matched=tab.to_pandas();matched=matched.dropna(subset=['route_id']);matched['record_id']=matched.record_id.astype(str);matched['route_id']=matched.route_id.astype(str)
     return records.merge(matched,on='record_id',how='inner',validate='one_to_many')
 
-def fit_route_models(root=Path('.'),pilot=False,save=True):
+def fit_route_models(root=Path('.'),pilot=False,save=True,cutoff='2023-01-01'):
     name=_best_scorer();scorer=_scorer(name);rec=read_fit_records(root);joined=join_matched_records(rec,root)
-    fit=joined[(joined.date<pd.Timestamp('2023-01-01'))|joined.split.eq('train_undated')].copy()
-    fit=fit[fit.date.isna()| (fit.date<pd.Timestamp('2023-01-01'))]
+    fit=joined[(joined.date<pd.Timestamp(cutoff))|joined.split.eq('train_undated')].copy()
+    fit=fit[fit.date.isna()| (fit.date<pd.Timestamp(cutoff))]
     features={};training={};
     for city in ('ho_chi_minh','da_nang'):
         manifest_city=_manifest(city)
@@ -84,7 +84,7 @@ def fit_route_models(root=Path('.'),pilot=False,save=True):
             if m is None:continue
             lm=m.get('model') if isinstance(m,dict) else m
             if hasattr(lm,'booster_'):lm.booster_.save_model(f'models/m1_s_{kind}.txt')
-        meta={'scorer':name,'fit_cutoff':'2022-12-31','max_training_date':'2022-12-31','train_cities':['ho_chi_minh','da_nang'],'route_labels':'dates<2023 plus train_undated','city_balanced_rain':True,'unlabeled_route_cap_per_city':20000,'fixed_seed':50723,'n_fit_routes':{c:int(len(x)) for c,x in training.items()},'n_rain_positive_routes':{c:int(x.label.sum()) for c,x in training.items()},'n_unlabeled_sampled':{c:int((~x.route_id.isin(x.attrs.get('any_routes',set()))).sum()) for c,x in training.items()}}
+        meta={'scorer':name,'fit_cutoff':cutoff,'max_training_date':str(pd.Timestamp(cutoff)-pd.Timedelta(days=1)),'train_cities':['ho_chi_minh','da_nang'],'route_labels':f'dates<{cutoff} plus train_undated','city_balanced_rain':True,'unlabeled_route_cap_per_city':20000,'fixed_seed':50723,'n_fit_routes':{c:int(len(x)) for c,x in training.items()},'n_rain_positive_routes':{c:int(x.label.sum()) for c,x in training.items()},'n_unlabeled_sampled':{c:int((~x.route_id.isin(x.attrs.get('any_routes',set()))).sum()) for c,x in training.items()}}
         Path('models/m1_s_fit_metadata.json').write_text(json.dumps(meta,indent=2))
     return scorer,manifest,features,training,rain_model,tide_model
 
@@ -99,15 +99,15 @@ def route_trigger(rain_s,tide_s,t_rain,t_tide):
     tr=np.float32(t_rain);tt=np.float32(t_tide)
     return np.asarray(1.-(1.-sr*tr)*(1.-st*tt),np.float32)
 
-def history_scores(joined,city,routes):
-    x=joined[(joined.city==city)&(joined.date.isna()|(joined.date<pd.Timestamp('2023-01-01')))]
+def history_scores(joined,city,routes,cutoff='2023-01-01'):
+    x=joined[(joined.city==city)&(joined.date.isna()|(joined.date<pd.Timestamp(cutoff)))]
     out={}
     for cause,causes in [('rain',{'rain','combined'}),('tide',{'tide','combined'})]:
         g=x[x.cause.isin(causes)]
         counts=g.dropna(subset=['date']).groupby('route_id').date.nunique().to_dict()
         seen=set(g.route_id.astype(str));n=np.asarray([int(counts.get(r,0)) for r in routes],np.float32)
         flag=np.asarray([r in seen for r in routes])
-        value=np.where(flag,.8+.2*np.minimum(1.,n/3.),0.).astype(np.float32)
+        value=np.where(flag,.9+.1*np.minimum(1.,n/3.),0.).astype(np.float32)
         out[cause]=(value,flag,n)
     return out
 
@@ -164,21 +164,25 @@ def levels_from_bands(rain_band,tide_band,t_rain,t_tide,thresholds):
     return result
 
 def _triggers(city,root=Path('.')):
-    x=pd.read_parquet(root/'data/processed'/city/'trigger_daily.parquet')
-    x['date']=pd.to_datetime(x.date).dt.normalize()
-    return x.set_index('date')
+    x=pd.read_parquet(root/'data/processed'/city/'trigger_daily.parquet',columns=['date','T_tide'])
+    x['date']=pd.to_datetime(x.date).dt.normalize();x=x.set_index('date')
+    for source in ('era5','ifs'):
+        r=pd.read_parquet(root/'data/processed/rain_percentiles'/f'{city}_{source}.parquet',columns=['date','T_rain'])
+        r['date']=pd.to_datetime(r.date).dt.normalize();r=r.set_index('date').rename(columns={'T_rain':f'T_rain_{source}'})
+        x=x.join(r,how='left')
+    return x
 
-def build_combination(root=Path('.'),pilot=False,save=True):
-    scorer,manifest,features,training,rain_model,tide_model=fit_route_models(root,pilot=pilot,save=save)
+def build_combination(root=Path('.'),pilot=False,save=True,cutoff='2023-01-01'):
+    scorer,manifest,features,training,rain_model,tide_model=fit_route_models(root,pilot=pilot,save=save,cutoff=cutoff)
     if pilot:
         return {'best':_best_scorer(),'pilot_rows':{c:len(x) for c,x in features.items()},'training_rows':{c:len(x) for c,x in training.items()}}
-    rec=read_fit_records(root);joined=join_matched_records(rec,root)
+    rec=read_fit_records(root);rec=rec[rec.date.isna()|(rec.date<pd.Timestamp(cutoff))].copy();joined=join_matched_records(rec,root)
     models={};thresholds={}
     for city,ft0 in features.items():
         ft=ft0.reset_index(drop=True);route=ft.route_id.astype(str).to_numpy();uni=ft.in_universe.to_numpy(bool)
-        sm_r=percentile_score(scorer.predict(rain_model,ft),uni)
-        sm_t=percentile_score(scorer.predict(tide_model,ft),uni) if city=='ho_chi_minh' else np.zeros(len(ft),np.float32)
-        hist=history_scores(joined,city,route);sh_r=np.maximum(sm_r,hist['rain'][0]);sh_t=np.maximum(sm_t,hist['tide'][0])
+        sm_r=.9*percentile_score(scorer.predict(rain_model,ft),uni)
+        sm_t=.9*percentile_score(scorer.predict(tide_model,ft),uni) if city=='ho_chi_minh' else np.zeros(len(ft),np.float32)
+        hist=history_scores(joined,city,route,cutoff=cutoff);sh_r=np.maximum(sm_r,hist['rain'][0]);sh_t=np.maximum(sm_t,hist['tide'][0])
         out=ft[['route_id','in_universe']].copy()
         out['S_rain']=sm_r;out['S_tide']=sm_t;out['S_hyb_rain']=sh_r;out['S_hyb_tide']=sh_t
         out['S_hist_rain']=hist['rain'][0];out['S_hist_tide']=hist['tide'][0]
@@ -186,25 +190,30 @@ def build_combination(root=Path('.'),pilot=False,save=True):
         out['n_distinct_dates_rain']=hist['rain'][2].astype(np.uint16);out['n_distinct_dates_tide']=hist['tide'][2].astype(np.uint16)
         out.to_parquet(root/'data/processed'/city/'route_susceptibility.parquet',index=False)
         trig=_triggers(city,root)
-        thresholds[city]={cause:choose_day_thresholds(city,cause,trig,rec) for cause in ('rain','tide')}
+        old_thresholds=json.loads(Path('models/combination_thresholds.json').read_text())['thresholds'][city]
+        pcfg=json.loads(Path('models/rain_percentile_trigger.json').read_text())
+        thresholds[city]={'rain':{'t_lo':pcfg['states']['q_watch'],'t_hi':pcfg['states']['q_alert'],'targets_met':pcfg['states']['targets_met'],'selected_alert_sensitivity':pcfg['states']['alert_sensitivity'],'selected_quiet_specificity':pcfg['states']['no_report_quiet'],'source':'pooled percentile trigger'},'tide':old_thresholds['tide']}
         models[city]=(out,route,uni,sm_r,sm_t,sh_r,sh_t,hist,trig)
     Path('models').mkdir(exist_ok=True)
-    Path('models/combination_thresholds.json').write_text(json.dumps({'max_fit_date':'2022-12-31','rule':'T<t_lo quiet; t_lo<=T<t_hi watch; T>=t_hi alert; route bands A top 5%, B next 15%','targets':{'alert_sensitivity':.70,'quiet_specificity':.80},'thresholds':thresholds},indent=2))
+    Path('models/combination_thresholds.json').write_text(json.dumps({'max_fit_date':'2022-12-31','rule':'T<t_lo quiet; t_lo<=T<t_hi watch; T>=t_hi alert; A=top5%, B=next15% by cause-specific hybrid score','targets':{'alert_sensitivity':.70,'quiet_specificity':.80},'thresholds':thresholds,'rain_percentile_thresholds':json.loads(Path('models/rain_percentile_trigger.json').read_text())['states']},indent=2))
     h0_path=Path('models/m2_history_h0.json')
-    if h0_path.exists():h0_path.write_text(json.dumps({'superseded_by':'combination_thresholds.json','history_score':'0.80 + 0.20*min(1,n_distinct_dates/3)','h0':None},indent=2))
+    if h0_path.exists():h0_path.write_text(json.dumps({'superseded_by':'combination_thresholds.json','history_score':'0.90 + 0.10*min(1,n_distinct_dates/3)','h0':None},indent=2))
     route_summary={}; dev_days={}
     for city,(out,route,uni,sm_r,sm_t,sh_r,sh_t,hist,trig) in models.items():
         daily=[];tdev=trig[(trig.index>='2023-01-01')&(trig.index<'2025-01-01')]
         for dt,q in tdev.iterrows():
             row={'date':dt};hm=hist['rain'][1]|hist['tide'][1]
-            for scope,mask in [('all',np.ones(len(route),bool)),('universe',uni)]:
-                modellev=levels_from_bands(route_bands(sm_r,sm_r,mask),route_bands(sm_t,sm_t,mask),q.T_rain,q.T_tide,thresholds[city])
-                hyblev=levels_from_bands(route_bands(sh_r,sm_r,mask),route_bands(sh_t,sm_t,mask),q.T_rain,q.T_tide,thresholds[city])
-                row[f'model_alert_{scope}']=float(np.mean(modellev[mask]>=1))
-                row[f'hybrid_alert_{scope}']=float(np.mean(hyblev[mask]>=1))
-                row[f'history_alert_{scope}']=float(np.mean(hm[mask]))
-            pm=route_trigger(sm_r,sm_t,q.T_rain,q.T_tide);ph=route_trigger(sh_r,sh_t,q.T_rain,q.T_tide)
-            row['P_model_mean']=float(np.mean(pm));row['P_hybrid_mean']=float(np.mean(ph));daily.append(row)
+            for source in ('era5','ifs'):
+                tr=float(getattr(q,f'T_rain_{source}'));tt=float(q.T_tide)
+                for scope,mask in [('all',np.ones(len(route),bool)),('universe',uni)]:
+                    modellev=levels_from_bands(route_bands(sm_r,sm_r,mask),route_bands(sm_t,sm_t,mask),tr,tt,thresholds[city])
+                    hyblev=levels_from_bands(route_bands(sh_r,sm_r,mask),route_bands(sh_t,sm_t,mask),tr,tt,thresholds[city])
+                    row[f'model_alert_{scope}_{source}']=float(np.mean(modellev[mask]>=1))
+                    row[f'hybrid_alert_{scope}_{source}']=float(np.mean(hyblev[mask]>=1))
+                    row[f'history_alert_{scope}_{source}']=float(np.mean(hm[mask]))
+                pm=route_trigger(sm_r,sm_t,tr,tt);ph=route_trigger(sh_r,sh_t,tr,tt)
+                row[f'P_model_mean_{source}']=float(np.mean(pm));row[f'P_hybrid_mean_{source}']=float(np.mean(ph))
+            daily.append(row)
         pd.DataFrame(daily).to_parquet(root/'data/processed'/city/'daily_alert_index_dev.parquet',index=False)
         route_summary[city]={'total':len(route),'in_universe':int(uni.sum()),'fit_routes':len(training[city]),'fit_unlabeled_sampled':int((~training[city].route_id.isin(training[city].attrs.get('any_routes',set()))).sum())}
         dev_days[city]=len(tdev)

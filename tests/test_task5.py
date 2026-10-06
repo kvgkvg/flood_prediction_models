@@ -45,7 +45,16 @@ def test_out_of_universe_percentile_is_halved():
 def test_history_score_uses_fit_distinct_dates():
     j=pd.DataFrame({'city':['c']*4,'route_id':['a','a','a','b'],'date':pd.to_datetime(['2020-01-01','2020-02-01','2020-03-01',None]),'cause':['rain']*4})
     got=history_scores(j,'c',['a','b','z'])['rain'][0]
-    assert np.allclose(got,[1.0,.8,0.0],atol=1e-7)
+    assert np.allclose(got,[1.0,.9,0.0],atol=1e-7)
+
+
+def test_hybrid_priority_keeps_every_history_route_above_unseen_model_scores():
+    model=.9*np.array([.99,.92,.80,.40],np.float32)
+    history=np.array([.9+.1/3,.9,.0,0.],np.float32)
+    hybrid=np.maximum(model,history)
+    # Two history routes: hybrid top-2 is exactly the history set; recurrence breaks ties.
+    assert set(np.argsort(-hybrid)[:2])=={0,1}
+    assert np.all(hybrid[:2]>=.9) and np.all(hybrid[2:]<.9)
 
 
 def test_fitted_artifacts_have_pre_dev_cutoff_when_present():

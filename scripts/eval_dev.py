@@ -6,9 +6,11 @@ import numpy as np
 import pandas as pd
 import pyarrow.dataset as ds
 from sklearn.metrics import roc_auc_score
-from floodrisk.combine import route_bands,route_trigger
+from floodrisk.combine import route_bands
 
-def boot_mean(values,seed=519,draws=2000):
+N_BOOT=2000
+def boot_mean(values,seed=519,draws=None):
+    draws=N_BOOT if draws is None else draws
     x=np.asarray(values,float);x=x[np.isfinite(x)]
     if not len(x):return np.nan,(np.nan,np.nan)
     rng=np.random.default_rng(seed);b=np.asarray([np.mean(x[rng.integers(0,len(x),len(x))]) for _ in range(draws)])
@@ -19,7 +21,8 @@ def fmt(v):
 def fmt_auc(v):
     m,(lo,hi)=v
     return f'{m:.3f} [{lo:.3f}, {hi:.3f}]' if np.isfinite(m) else 'NA'
-def auc_ci(y,s,seed=719,draws=2000):
+def auc_ci(y,s,seed=719,draws=None):
+    draws=N_BOOT if draws is None else draws
     y=np.asarray(y,bool);s=np.asarray(s,float)
     if not y.any() or y.all():return np.nan,(np.nan,np.nan)
     pos=np.flatnonzero(y);neg=np.flatnonzero(~y);rng=np.random.default_rng(seed);b=[]
@@ -46,13 +49,17 @@ def _top(score,ids,k,tie=None):
     if k==0:return np.asarray([],int)
     sc=np.asarray(score)[ids];tie=sc if tie is None else np.asarray(tie)[ids]
     return ids[np.lexsort((-tie,-sc))[:k]]
-def run(pilot=False):
+def run(pilot=False,rain_source='ifs',artifact_dir='data/processed',output_tag=None):
+    global N_BOOT
+    if pilot:N_BOOT=100
     rec=_records();matched=_matches(rec)
     thresholds=json.loads(Path('models/combination_thresholds.json').read_text())['thresholds']
+    rain_cut=json.loads(Path('models/rain_percentile_trigger.json').read_text())['states']
+    for city in thresholds:thresholds[city]['rain']={'t_lo':rain_cut['q_watch'],'t_hi':rain_cut['q_alert']}
     results=[];cityinfo={}
     for city in ('ho_chi_minh','da_nang'):
         cols=['route_id','in_universe','S_rain','S_tide','S_hyb_rain','S_hyb_tide','H_rain','H_tide','H_any']
-        path=Path('data/processed')/city/'route_susceptibility.parquet'
+        path=Path(artifact_dir)/city/'route_susceptibility.parquet'
         if pilot:
             import pyarrow.parquet as pq
             ps=[]
@@ -70,13 +77,19 @@ def run(pilot=False):
         for scope,mask in masks.items():
             bands[scope]={'mr':route_bands(sr,sr,mask),'mt':route_bands(st,st,mask),'hr':route_bands(shr,sr,mask),'ht':route_bands(sht,st,mask)}
         d=rec[rec.city==city];m=matched[matched.city==city]
+        d7={cause:{name:[] for name in ('model','history','hybrid','new_model','new_history','new_hybrid')} for cause in ('rain','tide')}
         byday={}
         for dt,g in m.groupby('date'):
             mp={}
             for rid,cause in zip(g.route_id.astype(str),g.cause.astype(str)):mp.setdefault(rid,set()).add(cause)
             byday[pd.Timestamp(dt)]=mp
-        t=pd.read_parquet(Path('data/processed')/city/'trigger_daily.parquet');t.date=pd.to_datetime(t.date).dt.normalize();t=t.set_index('date')
+        t=pd.read_parquet(Path('data/processed')/city/'trigger_daily.parquet',columns=['date','T_tide']);t.date=pd.to_datetime(t.date).dt.normalize();t=t.set_index('date')
+        rain=pd.read_parquet(Path('data/processed/rain_percentiles')/f'{city}_{rain_source}.parquet',columns=['date','T_rain']);rain.date=pd.to_datetime(rain.date).dt.normalize();t=t.join(rain.set_index('date'),how='inner')
         days=[x for x in pd.date_range('2023-01-01','2024-12-31',freq='D') if x in t.index]
+        if pilot:
+            events=set(d.date.dropna());events={x for x in events if x in t.index}
+            samples={x for x in (pd.Timestamp('2023-03-15'),pd.Timestamp('2023-07-15'),pd.Timestamp('2023-12-15')) if x in t.index and x not in events}
+            days=sorted(events|samples)
         eventdays=set(d.date.dropna());rainseason=lambda z:(5<=z.month<=11) if city=='ho_chi_minh' else (9<=z.month<=12)
         hit={};budget={};burden={};d6={};alert_idx={scope:{x:[] for x in ('model','history','hybrid')} for scope in masks};alert_idx_new={scope:{x:[] for x in ('model','history','hybrid')} for scope in masks}
         for scope in masks:
@@ -87,7 +100,6 @@ def run(pilot=False):
             d6[scope]={k:[] for k in ('5_hybrid','20_hybrid','5_new_hybrid','20_new_hybrid','5_model','20_model')}
         for day in days:
             q=t.loc[day];tr=float(q.T_rain);tt=float(q.T_tide);event=day in eventdays;mp=byday.get(day,{})
-            pm=route_trigger(sr,st,tr,tt);ph=route_trigger(shr,sht,tr,tt)
             for scope,mask in masks.items():
                 ix=np.flatnonzero(mask);b=bands[scope];th=thresholds[city]
                 mlr=_cause_level(b['mr'],tr,th['rain']);mlt=_cause_level(b['mt'],tt,th['tide'])
@@ -119,10 +131,20 @@ def run(pilot=False):
                     for name,val in [('model',pv),('history',yv),('hybrid',hv)]:
                         hit[scope][name].append(float(np.mean(val)))
                         hit[scope]['new_'+name].append(float(np.mean(np.asarray(val)[fresh])) if fresh.any() else np.nan)
+                    if city=='ho_chi_minh':
+                        for cause,modellev,histflag,hylev in (('rain',mlr,hr,hlr),('tide',mlt,ht,hlt)):
+                            js=[j for j,cs in positives if cause in cs]
+                            if js:
+                                isnew=np.asarray([not hist[j] for j in js])
+                                for name,levels,flags in [('model',modellev,None),('history',None,histflag),('hybrid',hylev,None)]:
+                                    values=[bool(flags[j]) if flags is not None else bool(levels[j]>=1) for j in js]
+                                    d7[cause][name].append(float(np.mean(values)))
+                                    d7[cause]['new_'+name].append(float(np.mean(np.asarray(values)[isnew])) if isnew.any() else np.nan)
                     kh=int(hist[ix].sum());nscope=len(ix)
                     routeids=[ids[j] for j,_ in positives];newids=[r for r,z in zip(routeids,fresh) if z]
                     for key,k in [('history_count',kh),('5pct',max(1,int(np.ceil(.05*nscope)))),('20pct',max(1,int(np.ceil(.20*nscope))))]:
-                        lists={'history':set(ids[ix[hist[ix]]]),'model':set(ids[_top(pm,ix,k)]),'hybrid':set(ids[_top(ph,ix,k)])}
+                        lists={'history':set(ids[ix[hist[ix]]]),'model':set(ids[_top(model_score,ix,k,model_score)]),'hybrid':set(ids[_top(hybrid_score,ix,k,model_score)])}
+                        if key=='history_count':assert lists['hybrid']==lists['history'],'hybrid top-K must equal history at K=history size'
                         for method,chosen in lists.items():
                             budget[scope][key][method].append(float(np.mean([r in chosen for r in routeids])))
                             budget[scope]['new'][key][method].append(float(np.mean([r in chosen for r in newids])) if newids else np.nan)
@@ -140,6 +162,13 @@ def run(pilot=False):
                     burden[scope][typ]['new_'+method].append(float(np.mean(lv[freshmask]>=1)) if freshmask.any() else np.nan)
                 burden[scope][typ]['history'].append(float(np.mean(hist[mask])))
                 burden[scope][typ]['new_history'].append(0. if freshmask.any() else np.nan)
+        dominance={}
+        for scope in masks:
+            for k in ('5pct','20pct'):
+                h=np.asarray(budget[scope][k]['hybrid'],float);m0=np.asarray(budget[scope][k]['model'],float)
+                ok=np.isfinite(h)&np.isfinite(m0)
+                delta=float(h[ok].mean()-m0[ok].mean()) if ok.any() else np.nan
+                dominance[(scope,k)]={'delta':delta,'passes':bool(not np.isfinite(delta) or delta>=-.02)}
         y=np.asarray([day in eventdays for day in days],bool)
         d4={}
         for scope in masks:
@@ -162,31 +191,39 @@ def run(pilot=False):
                     results.append({'city':city,'scope':scope,'metric':'D6_top'+pct,'method':method,'overall':fmt(d6[scope][key]),'new':fmt(d6[scope][pct+'_new_hybrid']) if method=='hybrid' else 'NA'})
             for method in ('model','history','hybrid'):
                 results.append({'city':city,'scope':scope,'metric':'D4_alert_index_auc','method':method,'overall':fmt_auc(d4[(scope,method)]),'new':fmt_auc(d4new[(scope,method)])})
+            for k in ('5pct','20pct'):
+                z=dominance[(scope,k)]
+                results.append({'city':city,'scope':scope,'metric':'hybrid_model_floor_'+k,'method':'hybrid-model','overall':f"{z['delta']:.3f}" if np.isfinite(z['delta']) else 'NA','new':str(z['passes'])})
+            if city=='ho_chi_minh':
+                for cause in ('rain','tide'):
+                    for method in ('model','history','hybrid'):
+                        results.append({'city':city,'scope':scope,'metric':'D7_'+cause,'method':method,'overall':fmt(d7[cause][method]),'new':fmt(d7[cause]['new_'+method])})
             for key in ('history_count','5pct','20pct'):
                 results.append({'city':city,'scope':scope,'metric':'D2_hybrid_minus_history_'+key,'method':'paired delta','overall':fmt(np.asarray(budget[scope][key]['hybrid'])-np.asarray(budget[scope][key]['history'])),'new':'NA'})
                 results.append({'city':city,'scope':scope,'metric':'D2_hybrid_minus_model_'+key,'method':'paired delta','overall':fmt(np.asarray(budget[scope][key]['hybrid'])-np.asarray(budget[scope][key]['model'])),'new':'NA'})
         cityinfo[city]={'records':len(d),'dates':d.date.nunique(),'matched_days':len(set(eventdays)&set(byday)),'unmatched':len(d)-d.record_id.isin(m.record_id).sum(),'d4':d4,'d4new':d4new}
     if pilot:
         print(f'DEV pilot passed: {len(results)} rows, no files written');return
-    reports=['# Combination v2 DEV evaluation','','A1 diagnosis of v1 HCMC D1: FIT medium cutoffs differed by population (all routes 0.0449; in-universe 0.4033). The 44 matched in-universe DEV flood routes had max P=0.0709; none passed 0.4033, while 11 passed the lower all-route cutoff. The OOU group did not have higher P (1 matched DEV route, P=0; OOU route-day P p95=0). Driver shift compounded this: HCMC DEV positive-day max T_rain max=0.068 vs FIT positive max=0.153, and T_tide max=0.061 vs 0.911. V2 removes population-specific P quantile levels.','', 'Levels use per-cause FIT-only T states and route bands: A top 5%, B next 15%, C rest; high=alert+A, medium=alert+B or watch+A. Model-only uses S_model; hybrid uses S_hyb=max(S_model,S_hist); history-only flags FIT routes. P_model/P_hybrid remain continuous routing-cost scores. This is a documented change from the prior flood-day-P quantile rule because that rule produced a population-dependent zero-alert failure.','', 'Rainy-season no-report days are season days without a record of the cause. Unreported days are not confirmed dry. All DEV labels are 2023–2024; locked records were filtered out before attributes were read. Intervals bootstrap days.','']
+    reports=[f'# Task 7 DEV evaluation — rain input {rain_source}','','Hybrid order uses S_model=0.90×percentile and S_hist=0.90+0.10×min(1,n_dates/3); runtime checks assert history equality at K=history size and report the model-floor comparison at 5% and 20%. Da Nang in-universe at 5% is a measured failure (hybrid-model = −0.051), because history priority displaces some model-ranked new routes.','',f"Shared pooled-FIT trigger thresholds q_watch={rain_cut['q_watch']:.6f}, q_alert={rain_cut['q_alert']:.6f}; input is city/source-specific {rain_source.upper()} climatological percentiles. Tide thresholds remain as in Task 6.",'','Route levels are A=top 5%, B=next 15%, high=alert+A, medium=alert+B or watch+A. All DEV labels are 2023–2024; locked records are filtered out before attributes are read. Intervals bootstrap days.','']
     for city in ('ho_chi_minh','da_nang'):
         info=cityinfo[city];reports += [f"## {city}",'',f"DEV records={info['records']}; distinct report dates={info['dates']}; matched event days={info['matched_days']}; unmatched records={info['unmatched']}.",'', '| Scope | D1 Model | D1 History | D1 Hybrid | D1 NEW Model | D1 NEW History | D1 NEW Hybrid |','|---|---:|---:|---:|---:|---:|---:|']
         for scope in ('all','in_universe'):
             rr=[z for z in results if z['city']==city and z['scope']==scope and z['metric']=='D1']
             reports.append('| '+scope+' | '+' | '.join(next(z['overall'] for z in rr if z['method']==m) for m in ('model','history','hybrid'))+' | '+' | '.join(next(z['new'] for z in rr if z['method']==m) for m in ('model','history','hybrid'))+' |')
-        reports += ['', 'D2 equal route-budget hit rate (K=history-list size / 5% / 20%); each cell is the ordered three-budget vector with day-bootstrap 95% CI. NEW restricts denominators to DEV routes without FIT history.','', '| Scope | Method | Overall | NEW |','|---|---|---:|---:|']
+        reports += ['', 'D2 equal route-budget hit rate (K=history-list size / 5% / 20%), ranking by S independent of T; each cell is the ordered three-budget vector with day-bootstrap 95% CI. NEW restricts denominators to DEV routes without FIT history.','', '| Scope | Method | Overall | NEW |','|---|---|---:|---:|']
         for scope in ('all','in_universe'):
             for method in ('history','model','hybrid'):
                 rr=[z for z in results if z['city']==city and z['scope']==scope and z['metric'].startswith('D2_') and z['method']==method]
                 overall=' / '.join(next(z['overall'] for z in rr if z['metric']=='D2_'+k) for k in ('history_count','5pct','20pct'))
                 new=' / '.join(next(z['new'] for z in rr if z['metric']=='D2_'+k) for k in ('history_count','5pct','20pct'))
                 reports.append(f'| {scope} | {method} | {overall} | {new} |')
-        reports += ['', 'D2 paired hybrid dominance check: hybrid S is pointwise >= both component scores by construction. The table reports paired hit-rate difference hybrid minus each comparator at K=history size/5%/20%; positive is better, and its 95% day-bootstrap CI shows whether the empirical top-K property holds.','', '| Scope | Comparator | Delta Khist / 5% / 20% |','|---|---|---:|']
+        reports += ['', 'D2 paired hybrid check: exact set equality with history at K=history size is asserted for every DEV flood day. The requested model-floor condition (hybrid hit rate >= model minus .02) is measured and marked; fixed history priority can displace new model hits, so a failed check is reported as a genuine formula/data trade-off, not hidden.','', '| Scope | Comparator | Delta Khist / 5% / 20% | Model-floor check at 5% / 20% |','|---|---|---:|---|']
         for scope in ('all','in_universe'):
             for comp in ('history','model'):
                 keys=['D2_hybrid_minus_'+comp+'_'+k for k in ('history_count','5pct','20pct')]
                 vals=[next(z['overall'] for z in results if z['city']==city and z['scope']==scope and z['metric']==key) for key in keys]
-                reports.append(f'| {scope} | {comp} | '+' / '.join(vals)+' |')
+                checks=' / '.join('pass' if dominance[(scope,k)]['passes'] else 'FAIL' for k in ('5pct','20pct')) if comp=='model' else '—'
+                reports.append(f'| {scope} | {comp} | '+' / '.join(vals)+f' | {checks} |')
         reports += ['', 'D3 alert burden: share of routes at medium/high on DEV record days / rainy-season no-report days / dry-season days. Values include point estimates and 95% day-bootstrap intervals; NEW restricts routes to no FIT history.','', '| Scope | Method | Overall | NEW |','|---|---|---:|---:|']
         for scope in ('all','in_universe'):
             for method in ('history','model','hybrid'):
@@ -199,6 +236,12 @@ def run(pilot=False):
             reports += ['',f"D4 {scope} city alert-index AUC: "+'; '.join(f"{m} {v[0]:.3f} [{v[1][0]:.3f}, {v[1][1]:.3f}]" for m,v in vals.items())+'.']
             valsnew={method:info['d4new'][(scope,method)] for method in ('model','history','hybrid')}
             reports.append(f"D4 {scope} NEW-route alert-index AUC: "+'; '.join(f"{m} {v[0]:.3f} [{v[1][0]:.3f}, {v[1][1]:.3f}]" for m,v in valsnew.items())+'.')
+        if city=='ho_chi_minh':
+            reports += ['', 'D7 HCMC hit rate by report cause (combined reports count in both groups; route-day weighted, bootstrap by day):','', '| Scope | Cause | Model overall / NEW | History overall / NEW | Hybrid overall / NEW |','|---|---|---:|---:|---:|']
+            for scope in ('all','in_universe'):
+                for cause in ('rain','tide'):
+                    rr=[z for z in results if z['city']==city and z['scope']==scope and z['metric']=='D7_'+cause]
+                    reports.append(f"| {scope} | {cause} | {next(z['overall'] for z in rr if z['method']=='model')} / {next(z['new'] for z in rr if z['method']=='model')} | {next(z['overall'] for z in rr if z['method']=='history')} / {next(z['new'] for z in rr if z['method']=='history')} | {next(z['overall'] for z in rr if z['method']=='hybrid')} / {next(z['new'] for z in rr if z['method']=='hybrid')} |")
         reports += ['', 'D6: share of matched DEV flood-day records with route in top 5% / 20% by S_hyb, independent of T (all / NEW):','', '| Scope | All records, top5 / top20 | NEW records, top5 / top20 |','|---|---:|---:|']
         for scope in ('all','in_universe'):
             vals=[]
@@ -210,8 +253,9 @@ def run(pilot=False):
             reports.append(f'| {scope} | {vals[0]} / {vals[1]} | {news[0]} / {news[1]} |')
         reports.append('')
     if pilot:print(f'DEV pilot passed: {len(results)} rows; no reports written');return
-    Path('reports/dev_eval.md').write_text('\n'.join(reports)+'\n')
-    pd.DataFrame(results).to_csv('reports/dev_results.tsv',sep='\t',index=False)
-    print(f'wrote reports/dev_eval.md and reports/dev_results.tsv ({len(results)} metric rows)')
+    tag=output_tag or rain_source
+    Path(f'reports/dev_eval_{tag}.md').write_text('\n'.join(reports)+'\n')
+    pd.DataFrame(results).to_csv(f'reports/dev_results_{tag}.tsv',sep='\t',index=False)
+    print(f'wrote DEV {tag} report and results ({len(results)} rows)')
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--pilot',action='store_true');run(p.parse_args().pilot)
+    p=argparse.ArgumentParser();p.add_argument('--pilot',action='store_true');p.add_argument('--rain-source',choices=['era5','ifs'],default='ifs');p.add_argument('--artifact-dir',default='data/processed');p.add_argument('--output-tag');a=p.parse_args();run(a.pilot,a.rain_source,a.artifact_dir,a.output_tag)

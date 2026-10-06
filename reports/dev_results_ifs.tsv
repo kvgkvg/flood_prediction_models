@@ -1,0 +1,157 @@
+city	scope	metric	method	overall	new
+ho_chi_minh	all	D1	model	0.375 [0.117, 0.642]	0.427 [0.133, 0.720]
+ho_chi_minh	all	D1	history	0.283 [0.092, 0.583]	0.000 [0.000, 0.000]
+ho_chi_minh	all	D1	hybrid	0.375 [0.117, 0.642]	0.427 [0.133, 0.720]
+ho_chi_minh	all	D2_history_count	model	0.107 [0.032, 0.183]	0.091 [0.022, 0.159]
+ho_chi_minh	all	D2_history_count	history	0.283 [0.092, 0.583]	0.000 [0.000, 0.000]
+ho_chi_minh	all	D2_history_count	hybrid	0.283 [0.092, 0.583]	0.000 [0.000, 0.000]
+ho_chi_minh	all	D2_5pct	model	0.552 [0.378, 0.750]	0.383 [0.269, 0.486]
+ho_chi_minh	all	D2_5pct	history	0.283 [0.092, 0.583]	0.000 [0.000, 0.000]
+ho_chi_minh	all	D2_5pct	hybrid	0.552 [0.378, 0.750]	0.383 [0.269, 0.486]
+ho_chi_minh	all	D2_20pct	model	0.800 [0.627, 0.945]	0.728 [0.537, 0.911]
+ho_chi_minh	all	D2_20pct	history	0.283 [0.092, 0.583]	0.000 [0.000, 0.000]
+ho_chi_minh	all	D2_20pct	hybrid	0.800 [0.627, 0.945]	0.728 [0.537, 0.911]
+ho_chi_minh	all	D3_flood	model	0.083 [0.017, 0.150]	0.082 [0.016, 0.149]
+ho_chi_minh	all	D3_flood	history	0.002 [0.002, 0.002]	0.000 [0.000, 0.000]
+ho_chi_minh	all	D3_flood	hybrid	0.083 [0.017, 0.150]	0.082 [0.016, 0.149]
+ho_chi_minh	all	D3_rain_no_report	model	0.073 [0.066, 0.081]	0.072 [0.065, 0.080]
+ho_chi_minh	all	D3_rain_no_report	history	0.002 [0.002, 0.002]	0.000 [0.000, 0.000]
+ho_chi_minh	all	D3_rain_no_report	hybrid	0.073 [0.066, 0.081]	0.072 [0.065, 0.080]
+ho_chi_minh	all	D3_dry	model	0.015 [0.010, 0.021]	0.015 [0.010, 0.021]
+ho_chi_minh	all	D3_dry	history	0.002 [0.002, 0.002]	0.000 [0.000, 0.000]
+ho_chi_minh	all	D3_dry	hybrid	0.015 [0.010, 0.021]	0.015 [0.010, 0.021]
+ho_chi_minh	all	D6_top5	hybrid	0.556 [0.381, 0.763]	0.392 [0.269, 0.507]
+ho_chi_minh	all	D6_top5	model	0.556 [0.381, 0.763]	NA
+ho_chi_minh	all	D6_top20	hybrid	0.802 [0.628, 0.949]	0.732 [0.537, 0.916]
+ho_chi_minh	all	D6_top20	model	0.802 [0.628, 0.949]	NA
+ho_chi_minh	all	D4_alert_index_auc	model	0.625 [0.419, 0.824]	0.619 [0.419, 0.813]
+ho_chi_minh	all	D4_alert_index_auc	history	0.500 [0.500, 0.500]	0.500 [0.500, 0.500]
+ho_chi_minh	all	D4_alert_index_auc	hybrid	0.625 [0.419, 0.824]	0.619 [0.419, 0.813]
+ho_chi_minh	all	hybrid_model_floor_5pct	hybrid-model	0.000	True
+ho_chi_minh	all	hybrid_model_floor_20pct	hybrid-model	0.000	True
+ho_chi_minh	all	D7_rain	model	0.347 [0.155, 0.538]	0.400 [0.208, 0.583]
+ho_chi_minh	all	D7_rain	history	0.317 [0.117, 0.570]	0.000 [0.000, 0.000]
+ho_chi_minh	all	D7_rain	hybrid	0.355 [0.155, 0.545]	0.400 [0.208, 0.583]
+ho_chi_minh	all	D7_tide	model	0.000 [0.000, 0.000]	0.000 [0.000, 0.000]
+ho_chi_minh	all	D7_tide	history	0.125 [0.125, 0.125]	0.000 [0.000, 0.000]
+ho_chi_minh	all	D7_tide	hybrid	0.000 [0.000, 0.000]	0.000 [0.000, 0.000]
+ho_chi_minh	all	D2_hybrid_minus_history_history_count	paired delta	0.000 [0.000, 0.000]	NA
+ho_chi_minh	all	D2_hybrid_minus_model_history_count	paired delta	0.175 [-0.075, 0.522]	NA
+ho_chi_minh	all	D2_hybrid_minus_history_5pct	paired delta	0.269 [0.137, 0.375]	NA
+ho_chi_minh	all	D2_hybrid_minus_model_5pct	paired delta	0.000 [0.000, 0.000]	NA
+ho_chi_minh	all	D2_hybrid_minus_history_20pct	paired delta	0.517 [0.274, 0.740]	NA
+ho_chi_minh	all	D2_hybrid_minus_model_20pct	paired delta	0.000 [0.000, 0.000]	NA
+ho_chi_minh	in_universe	D1	model	0.203 [0.067, 0.342]	0.213 [0.067, 0.360]
+ho_chi_minh	in_universe	D1	history	0.288 [0.096, 0.583]	0.000 [0.000, 0.000]
+ho_chi_minh	in_universe	D1	hybrid	0.217 [0.067, 0.383]	0.213 [0.067, 0.360]
+ho_chi_minh	in_universe	D2_history_count	model	0.110 [0.035, 0.185]	0.091 [0.022, 0.159]
+ho_chi_minh	in_universe	D2_history_count	history	0.288 [0.096, 0.583]	0.000 [0.000, 0.000]
+ho_chi_minh	in_universe	D2_history_count	hybrid	0.288 [0.096, 0.583]	0.000 [0.000, 0.000]
+ho_chi_minh	in_universe	D2_5pct	model	0.482 [0.319, 0.706]	0.315 [0.213, 0.416]
+ho_chi_minh	in_universe	D2_5pct	history	0.288 [0.096, 0.583]	0.000 [0.000, 0.000]
+ho_chi_minh	in_universe	D2_5pct	hybrid	0.510 [0.337, 0.717]	0.315 [0.213, 0.416]
+ho_chi_minh	in_universe	D2_20pct	model	0.679 [0.529, 0.833]	0.550 [0.407, 0.695]
+ho_chi_minh	in_universe	D2_20pct	history	0.288 [0.096, 0.583]	0.000 [0.000, 0.000]
+ho_chi_minh	in_universe	D2_20pct	hybrid	0.679 [0.529, 0.833]	0.550 [0.407, 0.695]
+ho_chi_minh	in_universe	D3_flood	model	0.083 [0.017, 0.150]	0.082 [0.016, 0.148]
+ho_chi_minh	in_universe	D3_flood	history	0.004 [0.004, 0.004]	0.000 [0.000, 0.000]
+ho_chi_minh	in_universe	D3_flood	hybrid	0.083 [0.017, 0.150]	0.082 [0.016, 0.147]
+ho_chi_minh	in_universe	D3_rain_no_report	model	0.074 [0.066, 0.081]	0.072 [0.065, 0.080]
+ho_chi_minh	in_universe	D3_rain_no_report	history	0.004 [0.004, 0.004]	0.000 [0.000, 0.000]
+ho_chi_minh	in_universe	D3_rain_no_report	hybrid	0.074 [0.066, 0.081]	0.072 [0.065, 0.079]
+ho_chi_minh	in_universe	D3_dry	model	0.015 [0.010, 0.021]	0.015 [0.010, 0.021]
+ho_chi_minh	in_universe	D3_dry	history	0.004 [0.004, 0.004]	0.000 [0.000, 0.000]
+ho_chi_minh	in_universe	D3_dry	hybrid	0.015 [0.010, 0.021]	0.015 [0.009, 0.021]
+ho_chi_minh	in_universe	D6_top5	hybrid	0.515 [0.337, 0.724]	0.326 [0.213, 0.438]
+ho_chi_minh	in_universe	D6_top5	model	0.489 [0.325, 0.708]	NA
+ho_chi_minh	in_universe	D6_top20	hybrid	0.682 [0.532, 0.833]	0.557 [0.408, 0.705]
+ho_chi_minh	in_universe	D6_top20	model	0.682 [0.532, 0.833]	NA
+ho_chi_minh	in_universe	D4_alert_index_auc	model	0.625 [0.419, 0.824]	0.619 [0.419, 0.813]
+ho_chi_minh	in_universe	D4_alert_index_auc	history	0.500 [0.500, 0.500]	0.500 [0.500, 0.500]
+ho_chi_minh	in_universe	D4_alert_index_auc	hybrid	0.625 [0.419, 0.824]	0.619 [0.419, 0.813]
+ho_chi_minh	in_universe	hybrid_model_floor_5pct	hybrid-model	0.028	True
+ho_chi_minh	in_universe	hybrid_model_floor_20pct	hybrid-model	0.000	True
+ho_chi_minh	in_universe	D7_rain	model	0.347 [0.155, 0.538]	0.400 [0.208, 0.583]
+ho_chi_minh	in_universe	D7_rain	history	0.317 [0.117, 0.570]	0.000 [0.000, 0.000]
+ho_chi_minh	in_universe	D7_rain	hybrid	0.355 [0.155, 0.545]	0.400 [0.208, 0.583]
+ho_chi_minh	in_universe	D7_tide	model	0.000 [0.000, 0.000]	0.000 [0.000, 0.000]
+ho_chi_minh	in_universe	D7_tide	history	0.125 [0.125, 0.125]	0.000 [0.000, 0.000]
+ho_chi_minh	in_universe	D7_tide	hybrid	0.000 [0.000, 0.000]	0.000 [0.000, 0.000]
+ho_chi_minh	in_universe	D2_hybrid_minus_history_history_count	paired delta	0.000 [0.000, 0.000]	NA
+ho_chi_minh	in_universe	D2_hybrid_minus_model_history_count	paired delta	0.178 [-0.075, 0.522]	NA
+ho_chi_minh	in_universe	D2_hybrid_minus_history_5pct	paired delta	0.222 [0.104, 0.326]	NA
+ho_chi_minh	in_universe	D2_hybrid_minus_model_5pct	paired delta	0.028 [0.000, 0.083]	NA
+ho_chi_minh	in_universe	D2_hybrid_minus_history_20pct	paired delta	0.392 [0.200, 0.550]	NA
+ho_chi_minh	in_universe	D2_hybrid_minus_model_20pct	paired delta	0.000 [0.000, 0.000]	NA
+da_nang	all	D1	model	0.477 [0.266, 0.688]	0.492 [0.285, 0.708]
+da_nang	all	D1	history	0.095 [0.000, 0.222]	0.000 [0.000, 0.000]
+da_nang	all	D1	hybrid	0.466 [0.260, 0.682]	0.478 [0.267, 0.695]
+da_nang	all	D2_history_count	model	0.208 [0.074, 0.365]	0.136 [0.033, 0.258]
+da_nang	all	D2_history_count	history	0.095 [0.000, 0.222]	0.000 [0.000, 0.000]
+da_nang	all	D2_history_count	hybrid	0.095 [0.000, 0.222]	0.000 [0.000, 0.000]
+da_nang	all	D2_5pct	model	0.425 [0.235, 0.601]	0.367 [0.195, 0.550]
+da_nang	all	D2_5pct	history	0.095 [0.000, 0.222]	0.000 [0.000, 0.000]
+da_nang	all	D2_5pct	hybrid	0.416 [0.226, 0.593]	0.353 [0.183, 0.539]
+da_nang	all	D2_20pct	model	0.907 [0.798, 0.984]	0.895 [0.783, 0.983]
+da_nang	all	D2_20pct	history	0.095 [0.000, 0.222]	0.000 [0.000, 0.000]
+da_nang	all	D2_20pct	hybrid	0.907 [0.798, 0.984]	0.895 [0.783, 0.983]
+da_nang	all	D3_flood	model	0.088 [0.050, 0.125]	0.079 [0.044, 0.116]
+da_nang	all	D3_flood	history	0.016 [0.016, 0.016]	0.000 [0.000, 0.000]
+da_nang	all	D3_flood	hybrid	0.088 [0.050, 0.125]	0.075 [0.039, 0.114]
+da_nang	all	D3_rain_no_report	model	0.068 [0.058, 0.079]	0.062 [0.052, 0.072]
+da_nang	all	D3_rain_no_report	history	0.016 [0.016, 0.016]	0.000 [0.000, 0.000]
+da_nang	all	D3_rain_no_report	hybrid	0.068 [0.058, 0.079]	0.059 [0.049, 0.069]
+da_nang	all	D3_dry	model	0.021 [0.018, 0.026]	0.019 [0.015, 0.022]
+da_nang	all	D3_dry	history	0.016 [0.016, 0.016]	0.000 [0.000, 0.000]
+da_nang	all	D3_dry	hybrid	0.021 [0.018, 0.026]	0.017 [0.014, 0.021]
+da_nang	all	D6_top5	hybrid	0.405 [0.218, 0.586]	0.346 [0.178, 0.536]
+da_nang	all	D6_top5	model	0.425 [0.235, 0.599]	NA
+da_nang	all	D6_top20	hybrid	0.885 [0.762, 0.988]	0.874 [0.741, 0.988]
+da_nang	all	D6_top20	model	0.885 [0.762, 0.988]	NA
+da_nang	all	D4_alert_index_auc	model	0.725 [0.605, 0.829]	0.725 [0.605, 0.829]
+da_nang	all	D4_alert_index_auc	history	0.500 [0.500, 0.500]	0.500 [0.500, 0.500]
+da_nang	all	D4_alert_index_auc	hybrid	0.725 [0.605, 0.829]	0.725 [0.605, 0.829]
+da_nang	all	hybrid_model_floor_5pct	hybrid-model	-0.010	True
+da_nang	all	hybrid_model_floor_20pct	hybrid-model	0.000	True
+da_nang	all	D2_hybrid_minus_history_history_count	paired delta	0.000 [0.000, 0.000]	NA
+da_nang	all	D2_hybrid_minus_model_history_count	paired delta	-0.113 [-0.233, -0.015]	NA
+da_nang	all	D2_hybrid_minus_history_5pct	paired delta	0.321 [0.156, 0.491]	NA
+da_nang	all	D2_hybrid_minus_model_5pct	paired delta	-0.010 [-0.027, 0.003]	NA
+da_nang	all	D2_hybrid_minus_history_20pct	paired delta	0.812 [0.657, 0.938]	NA
+da_nang	all	D2_hybrid_minus_model_20pct	paired delta	0.000 [0.000, 0.000]	NA
+da_nang	in_universe	D1	model	0.429 [0.237, 0.629]	0.439 [0.240, 0.647]
+da_nang	in_universe	D1	history	0.097 [0.000, 0.222]	0.000 [0.000, 0.000]
+da_nang	in_universe	D1	hybrid	0.392 [0.192, 0.593]	0.399 [0.198, 0.617]
+da_nang	in_universe	D2_history_count	model	0.210 [0.076, 0.366]	0.137 [0.033, 0.259]
+da_nang	in_universe	D2_history_count	history	0.097 [0.000, 0.222]	0.000 [0.000, 0.000]
+da_nang	in_universe	D2_history_count	hybrid	0.097 [0.000, 0.222]	0.000 [0.000, 0.000]
+da_nang	in_universe	D2_5pct	model	0.367 [0.201, 0.536]	0.302 [0.156, 0.463]
+da_nang	in_universe	D2_5pct	history	0.097 [0.000, 0.222]	0.000 [0.000, 0.000]
+da_nang	in_universe	D2_5pct	hybrid	0.316 [0.151, 0.488]	0.244 [0.108, 0.411]
+da_nang	in_universe	D2_20pct	model	0.903 [0.801, 0.989]	0.892 [0.781, 0.988]
+da_nang	in_universe	D2_20pct	history	0.097 [0.000, 0.222]	0.000 [0.000, 0.000]
+da_nang	in_universe	D2_20pct	hybrid	0.903 [0.801, 0.989]	0.892 [0.781, 0.988]
+da_nang	in_universe	D3_flood	model	0.088 [0.050, 0.125]	0.077 [0.042, 0.113]
+da_nang	in_universe	D3_flood	history	0.023 [0.023, 0.023]	0.000 [0.000, 0.000]
+da_nang	in_universe	D3_flood	hybrid	0.088 [0.050, 0.125]	0.070 [0.033, 0.109]
+da_nang	in_universe	D3_rain_no_report	model	0.068 [0.058, 0.079]	0.060 [0.050, 0.070]
+da_nang	in_universe	D3_rain_no_report	history	0.023 [0.023, 0.023]	0.000 [0.000, 0.000]
+da_nang	in_universe	D3_rain_no_report	hybrid	0.068 [0.058, 0.079]	0.055 [0.046, 0.065]
+da_nang	in_universe	D3_dry	model	0.021 [0.018, 0.026]	0.018 [0.014, 0.022]
+da_nang	in_universe	D3_dry	history	0.023 [0.023, 0.023]	0.000 [0.000, 0.000]
+da_nang	in_universe	D3_dry	hybrid	0.021 [0.018, 0.026]	0.015 [0.012, 0.018]
+da_nang	in_universe	D6_top5	hybrid	0.322 [0.149, 0.499]	0.255 [0.107, 0.428]
+da_nang	in_universe	D6_top5	model	0.372 [0.200, 0.547]	NA
+da_nang	in_universe	D6_top20	hybrid	0.887 [0.755, 0.992]	0.875 [0.736, 0.991]
+da_nang	in_universe	D6_top20	model	0.887 [0.755, 0.992]	NA
+da_nang	in_universe	D4_alert_index_auc	model	0.725 [0.605, 0.829]	0.725 [0.605, 0.829]
+da_nang	in_universe	D4_alert_index_auc	history	0.500 [0.500, 0.500]	0.500 [0.500, 0.500]
+da_nang	in_universe	D4_alert_index_auc	hybrid	0.725 [0.605, 0.829]	0.725 [0.605, 0.829]
+da_nang	in_universe	hybrid_model_floor_5pct	hybrid-model	-0.051	False
+da_nang	in_universe	hybrid_model_floor_20pct	hybrid-model	0.000	True
+da_nang	in_universe	D2_hybrid_minus_history_history_count	paired delta	0.000 [0.000, 0.000]	NA
+da_nang	in_universe	D2_hybrid_minus_model_history_count	paired delta	-0.113 [-0.234, -0.014]	NA
+da_nang	in_universe	D2_hybrid_minus_history_5pct	paired delta	0.219 [0.089, 0.368]	NA
+da_nang	in_universe	D2_hybrid_minus_model_5pct	paired delta	-0.051 [-0.125, 0.002]	NA
+da_nang	in_universe	D2_hybrid_minus_history_20pct	paired delta	0.806 [0.657, 0.942]	NA
+da_nang	in_universe	D2_hybrid_minus_model_20pct	paired delta	0.000 [0.000, 0.000]	NA

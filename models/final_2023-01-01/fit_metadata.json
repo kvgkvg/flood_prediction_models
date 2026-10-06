@@ -1,0 +1,8 @@
+{
+  "cutoff": "2023-01-01",
+  "max_training_date": "2022-12-31 00:00:00",
+  "route_fit_split": "train and train_undated; date < cutoff",
+  "test_locked_read": false,
+  "scorer": "lgbm_phys_cityrank",
+  "rain_unlabeled_cap_per_city": 20000
+}

@@ -1,5 +1,5 @@
 {
   "superseded_by": "combination_thresholds.json",
-  "history_score": "0.80 + 0.20*min(1,n_distinct_dates/3)",
+  "history_score": "0.90 + 0.10*min(1,n_distinct_dates/3)",
   "h0": null
 }
